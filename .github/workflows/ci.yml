@@ -7,6 +7,8 @@ on:
 jobs:
   rust:
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -15,11 +17,13 @@ jobs:
       - run: cargo test -p agent-hangar-core
   frontend:
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-      - run: npm install --no-audit --no-fund
+      - run: npm ci --no-audit --no-fund
       - run: npm test
       - run: npm run build

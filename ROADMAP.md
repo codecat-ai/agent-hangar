@@ -1,27 +1,76 @@
-# Roadmap
+# Agent Hangar Roadmap
 
-## Milestone 0 — Foundation
-- [x] MIT-licensed repository scaffold.
-- [x] Rust core crate with provider and agent runtime harness tests.
-- [x] React/Tauri shell with provider and agent state panels.
-- [ ] Installable frontend lockfile once package registry access is reliable.
+## Maturity and cadence
 
-## Milestone 1 — Provider management
-- Add encrypted local provider profiles.
-- Implement OpenAI, Anthropic, Gemini, and OpenAI-compatible model discovery.
-- Add provider health checks and model capability tags.
+- **Maturity:** `active-development`
+- **Planned cadence:** 2-4 focused sessions per week during foundation hardening.
+- **Current phase:** Foundation and provider-management groundwork.
+- **Category:** Local-first desktop productivity / multi-agent operations UI.
 
-## Milestone 2 — Agent template studio
-- Prompt template CRUD with variables and version history.
-- Role presets: planner, researcher, implementer, reviewer, operator.
-- Validation harness for missing model/tool/provider policies.
+Agent Hangar is a young project. It should receive active investment only while each session advances a product-shaped workflow: reproducible setup, safe provider management, prompt/template governance, task execution, observability, or usable demo evidence. Avoid adding decorative UI or narrow options before the core operator workflow is dependable.
 
-## Milestone 3 — Execution graph
-- Create tasks, assign agent teams, spawn subagents, and stream events.
-- Support pause/resume/cancel/retry with durable audit logs.
-- Add inter-agent communication inbox and escalation rules.
+## Now
 
-## Milestone 4 — Observability and polish
-- Timeline replay, token/cost tracking, structured error taxonomy.
-- Pixel animation pack for queued/working/blocked/failed/completed states.
-- Import/export workspace bundles.
+1. **Reproducible frontend setup**
+   - A `package-lock.json` is now committed so local and CI frontend installs can use `npm ci`.
+   - Keep source-checkout documentation truthful until a packaged desktop release exists.
+   - Verify Rust core tests, frontend build, frontend tests, and CI together.
+2. **Provider-management foundation**
+   - Add encrypted local provider profiles.
+   - Preserve the secret-safe display/debug contract for provider cards.
+   - Add provider health checks and normalized model capability tags.
+3. **Operator-facing shell hardening**
+   - Turn provider and agent panels from static scaffolding into test-backed UI states.
+   - Add empty, loading, error, and disconnected states before introducing long-running execution.
+
+## Next
+
+1. **Agent template studio**
+   - Prompt template CRUD with variables and version history.
+   - Role presets for planner, researcher, implementer, reviewer, and operator.
+   - Validation for missing model, tool, provider, and escalation policies.
+2. **Execution graph**
+   - Create tasks, assign agent teams, spawn subagents, and stream events.
+   - Support pause, resume, cancel, retry, and durable audit logs.
+   - Add inter-agent inbox views for delegation, review, broadcast, and escalation.
+3. **Demo workspace**
+   - Include a deterministic local demo showing a small team moving a task from planning to review.
+   - Keep demo data free of real secrets, tokens, customer data, or external commands.
+
+## Later
+
+1. **Observability and replay**
+   - Timeline replay, token/cost summaries, structured error taxonomy, and exportable run reports.
+2. **Workspace portability**
+   - Import/export workspace bundles with schema versions and validation reports.
+3. **Polish and accessibility**
+   - Keyboard-first navigation, screen-reader labels for operational states, and a restrained pixel animation pack for queued, working, blocked, failed, and completed states.
+4. **Packaging review**
+   - Evaluate signed desktop builds only after the provider profile and task execution workflows are useful and tested.
+
+## Maintenance triggers
+
+Treat these as higher priority than routine feature growth:
+
+- Failing `main` CI or broken local verification commands.
+- Misleading install or packaging documentation.
+- Any path that can display, log, export, or commit provider secrets.
+- Data-loss risk in local provider profiles, templates, workspaces, or task history.
+- Browser/Tauri compatibility regressions that block the source-checkout workflow.
+- Accessibility regressions in core operator controls.
+
+## Cadence-review notes
+
+Review cadence after the provider-management foundation and first demo workspace are complete.
+
+- If Agent Hangar has a working source-checkout desktop flow, encrypted provider profiles, provider health checks, template CRUD, and a useful demo workspace, consider moving from `active-development` to `growth`.
+- If setup remains fragile or the project does not yet offer a usable operator workflow after several sessions, pause new feature work and focus only on reproducibility and onboarding.
+- If a future desktop package or public release is prepared, verify install instructions against the actual artifact before documenting them.
+
+## Completion-review rule
+
+Before adding work beyond the current Now/Next/Later plan, do a completion review:
+
+1. Verify whether the current roadmap created a coherent operator workflow rather than only disconnected panels.
+2. Decide whether user value justifies a new phase such as packaged releases, integrations, or multi-provider execution.
+3. If not, lower cadence to `maintenance` and reserve effort for bugs, CI, docs truthfulness, security/privacy, or adoption-driven requests.
