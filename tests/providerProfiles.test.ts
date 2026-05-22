@@ -56,7 +56,16 @@ describe('provider profile vault harness', () => {
       baseUrl: 'https://api.anthropic.com',
       apiKeyConfigured: true,
       modelCount: 1,
-      health: 'ready',
+      health: {
+        status: 'ready',
+        label: 'Ready',
+        detail: 'Provider is reachable with 1 discovered model.',
+        checkedAt: undefined,
+      },
+      capabilities: {
+        counts: { text: 1, reasoning: 1, longContext: 1, toolUse: 1 },
+        tags: ['text', 'reasoning', 'longContext', 'toolUse'],
+      },
     });
     expect(JSON.stringify(profile)).not.toContain('sk-ant-secret');
     expect(JSON.stringify(card)).not.toContain('sk-ant-secret');
@@ -74,7 +83,10 @@ describe('provider profile vault harness', () => {
     expect(toProviderCard(profile, [{ id: 'gemini-2.5-pro', displayName: 'Gemini 2.5 Pro', providerKind: 'gemini' }])).toMatchObject({
       apiKeyConfigured: false,
       modelCount: 1,
-      health: 'needs-key',
+      health: {
+        status: 'needs-key',
+        label: 'Missing API key',
+      },
     });
   });
 

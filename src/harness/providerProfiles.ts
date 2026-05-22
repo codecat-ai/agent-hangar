@@ -1,4 +1,4 @@
-import type { NormalizedModel, ProviderCard, ProviderKind } from './providerCatalog';
+import { normalizeProviderHealth, summarizeModelCapabilities, type NormalizedModel, type ProviderCard, type ProviderHealthStatus, type ProviderKind } from './providerCatalog';
 
 const providerKinds = ['openai', 'anthropic', 'gemini', 'openai-compatible'] as const;
 const profileIdPattern = /^[a-z0-9][a-z0-9_-]{1,63}$/;
@@ -12,8 +12,9 @@ export interface ProviderProfileCrypto {
 
 export interface ProviderHealthMetadata {
   checkedAt?: string;
-  status?: ProviderCard['health'];
+  status?: ProviderHealthStatus;
   message?: string;
+  modelInventoryUpdatedAt?: string;
 }
 
 export interface ProviderCapabilityMetadata {
@@ -83,7 +84,14 @@ export function toProviderCard(profile: ProviderProfile, models: NormalizedModel
     baseUrl: profile.baseUrl,
     apiKeyConfigured,
     modelCount,
-    health: !apiKeyConfigured ? 'needs-key' : modelCount > 0 ? 'ready' : 'empty',
+    health: normalizeProviderHealth({
+      apiKeyConfigured,
+      modelCount,
+      checkedAt: profile.health?.checkedAt,
+      lastError: profile.health?.status === 'degraded' ? profile.health.message : undefined,
+      modelInventoryUpdatedAt: profile.health?.modelInventoryUpdatedAt,
+    }),
+    capabilities: summarizeModelCapabilities(models),
   };
 }
 
