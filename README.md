@@ -10,7 +10,7 @@ Agent frameworks are useful as libraries, but operators still need a clear deskt
 
 ## Current status
 
-Agent Hangar is in **active-development** foundation work. The Rust core harness currently has passing tests for provider normalization, secret-safe provider cards, agent templates, status transitions, and inter-agent message routing. The Tauri/React shell is scaffolded with provider and agent state panels.
+Agent Hangar is in **active-development** foundation work. The Rust core harness currently has passing tests for provider normalization, secret-safe provider cards, encrypted local provider profile helpers, agent templates, status transitions, and inter-agent message routing. The Tauri/React shell is scaffolded with provider and agent state panels.
 
 The app is not packaged for end users yet. Use the source checkout workflow below for development and evaluation.
 
@@ -20,6 +20,7 @@ Implemented foundation pieces:
 
 - Rust workspace with an `agent-hangar-core` crate for provider and agent runtime primitives.
 - Provider cards that keep secrets out of display/debug output.
+- Pure frontend harness helpers for encrypted local provider profiles with injectable crypto for future Tauri secure storage.
 - Normalized model metadata for future provider integrations.
 - Agent templates, runtime status transitions, and typed inter-agent message routing.
 - React/Tauri shell scaffold for provider overview and agent state panels.
@@ -76,11 +77,11 @@ A future demo workspace will show a planner, researcher, implementer, and review
 
 ## Configuration
 
-No production provider configuration is required yet. Planned configuration will be local-first and secret-safe:
+No production provider configuration is required yet. The foundation configuration helpers are local-first and secret-safe:
 
-- Provider profiles will be stored locally.
+- Provider profiles can be represented locally with encrypted API keys.
 - Secrets must not appear in debug strings, exported cards, logs, or UI snapshots.
-- Provider capability metadata will be normalized before agents use it.
+- Provider health checks and capability metadata normalization are the next provider-management work.
 
 ## Development
 
@@ -113,7 +114,7 @@ See [ROADMAP.md](ROADMAP.md) for the active-development cadence, Now/Next/Later 
 Current focus:
 
 - Complete early provider-management ergonomics on top of the reproducible frontend install flow.
-- Add encrypted local provider profiles.
+- Wire encrypted local provider profiles into the desktop provider-management flow.
 - Build provider health checks and model capability tags.
 - Grow the agent template studio after provider management is dependable.
 

@@ -16,8 +16,8 @@ Agent Hangar is a young project. It should receive active investment only while 
    - Keep source-checkout documentation truthful until a packaged desktop release exists.
    - Verify Rust core tests, frontend build, frontend tests, and CI together.
 2. **Provider-management foundation**
-   - Add encrypted local provider profiles.
-   - Preserve the secret-safe display/debug contract for provider cards.
+   - Encrypted local provider profile helpers are implemented in the frontend harness with injectable crypto for later Tauri secure storage.
+   - Preserve the secret-safe display/debug contract for provider cards as the profile flow reaches UI integration.
    - Add provider health checks and normalized model capability tags.
 3. **Operator-facing shell hardening**
    - Turn provider and agent panels from static scaffolding into test-backed UI states.
