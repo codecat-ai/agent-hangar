@@ -2,33 +2,129 @@
 
 [English](README.md) | [中文](README-zh.md) | [日本語](README-ja.md)
 
-Agent Hangar 是一个基于 Rust Tauri + React 的桌面多 AI Agent 管理工具，用于让多个 AI 扮演不同职能，协作完成长时间复杂任务。项目重点是优秀的 harness 设计：provider 抽象、模型列表自动发现、提示词模板治理、Agent 间类型化通信、subagent、持久化状态与清晰管理界面。
+Agent Hangar 是一个基于 Rust Tauri + React 的桌面控制中心，用于管理协作处理长时间复杂任务的 AI Agent 团队。
 
-## 项目目标
+## 问题与动机
 
-很多 Agent 框架适合作为库使用，但真正执行复杂任务时，还需要一个清晰的控制台来管理 API provider、模型、角色提示词、任务状态、协作消息、失败重试和交接记录。Agent Hangar 的目标就是成为这个控制室。
-
-## 规划能力
-
-- 管理 OpenAI、Anthropic、Gemini 和第三方 OpenAI-compatible provider。
-- 自动获取并标准化 provider 的模型列表。
-- 创建和版本化不同职能的 Agent 提示词模板。
-- 创建长时间任务，由多个 Agent 和 subagent 协作执行。
-- 支持 delegation、review、broadcast、escalation 等类型化 Agent 通信。
-- 使用像素动画清晰展示 queued、working、failed、completed 等运行状态。
+Agent 框架作为库很有用，但真正运营多 Agent 工作流时，还需要一个清晰的桌面界面来管理 provider 密钥、模型列表、角色提示词、任务状态、协作消息、失败、重试、交接和审计记录。Agent Hangar 希望成为这个本地控制室，而不是把每次实验都强制放进云端仪表盘。
 
 ## 当前状态
 
-项目处于基础建设阶段。Rust core harness 已有测试覆盖 provider 标准化、secret-safe provider cards、Agent 模板、状态转换和 Agent 间消息路由。Tauri/React shell 与文档已完成初始脚手架。
+Agent Hangar 处于 **active-development** 基础建设阶段。Rust core harness 目前已有 provider 标准化、secret-safe provider card、Agent 模板、状态转换和 Agent 间类型化消息路由的通过测试。Tauri/React shell 已搭建 provider 概览和 Agent 状态面板。
 
-## 开发
+应用还没有面向最终用户打包。开发和评估请使用下面的源码 checkout 流程。
+
+## 功能
+
+已实现的基础能力：
+
+- Rust workspace，包含用于 provider 与 Agent runtime 基础类型的 `agent-hangar-core` crate。
+- Provider card 在显示和调试输出中隐藏密钥。
+- 用于后续 provider 集成的标准化模型元数据。
+- Agent 模板、运行状态转换和类型化 Agent 间消息路由。
+- React/Tauri shell 脚手架，包含 provider 概览和 Agent 状态面板。
+- GitHub Actions CI，用于 Rust 与前端验证。
+
+规划能力：
+
+- 管理 OpenAI、Anthropic、Gemini 和第三方 OpenAI-compatible provider。
+- 获取并标准化 provider 模型列表。
+- 创建和版本化基于角色的提示词模板。
+- 启动由多个 Agent 和 subagent 协作的长时间任务。
+- 在 Agent 之间路由 delegation、review、broadcast 和 escalation 消息。
+- 用清晰的视觉提示展示 queued、working、blocked、failed 和 completed 状态。
+
+## 安装
+
+Agent Hangar 尚未发布到 npm、Cargo、Homebrew 或任何包注册表。请克隆仓库并从源码运行：
+
+```bash
+git clone https://github.com/codecat-ai/agent-hangar.git
+cd agent-hangar
+```
+
+只开发 Rust core 时，可以直接使用 Cargo：
 
 ```bash
 cargo test -p agent-hangar-core
 ```
 
-前端命令已写入 `package.json`；请在可以访问 npm registry 的环境中安装依赖后运行。
+开发前端/Tauri 时，请在可以访问 npm registry 的环境中安装锁定依赖：
+
+```bash
+npm ci
+npm run build
+npm test
+```
+
+## 快速开始
+
+1. 克隆仓库。
+2. 运行 `cargo test -p agent-hangar-core` 验证 Rust core。
+3. 在 npm registry 可用时，用 `npm ci` 安装锁定的前端依赖。
+4. 运行 `npm run build` 和 `npm test` 验证 shell。
+5. UI 迭代时使用 `npm run dev` 运行 Vite 前端；开发桌面 shell 时使用 `npm run tauri`。
+
+## 示例
+
+当前基础能力最适合通过测试查看：
+
+- `cargo test -p agent-hangar-core` 覆盖 provider 标准化和 runtime 状态行为。
+- 安装依赖后，前端测试会验证 React shell 行为。
+
+未来的 demo workspace 将展示 planner、researcher、implementer 和 reviewer Agent 如何通过类型化交接协作完成长时间任务。
+
+## 配置
+
+目前还不需要生产 provider 配置。规划中的配置将保持 local-first 和 secret-safe：
+
+- Provider profile 将保存在本地。
+- 密钥不得出现在 debug 字符串、导出的 card、日志或 UI snapshot 中。
+- Agent 使用 provider 能力前，会先对 capability metadata 做标准化。
+
+## 开发
+
+常用命令：
+
+```bash
+cargo test -p agent-hangar-core
+npm run build
+npm test
+```
+
+前端包标记为 `private`，因为尚未发布 npm package。除非真实 package release 已获批准并验证，否则不要记录 `npm install -g`、`npx` 或其他 registry 命令。
+
+## 测试
+
+CI 会在 GitHub Actions 上运行项目检查。本地检查应包括：
+
+```bash
+cargo test -p agent-hangar-core
+npm run build
+npm test
+```
+
+添加新行为时请遵循 TDD：先写失败的行为测试，确认它因预期原因失败，再实现最小代码，然后运行 focused 和 full verification 命令。
+
+## 路线图
+
+详见 [ROADMAP.md](ROADMAP.md)，其中包含 active-development cadence、Now/Next/Later 计划、维护触发条件和完成度评审规则。
+
+当前重点：
+
+- 在可复现的前端 install flow 基础上完善早期 provider-management 体验。
+- 添加加密的本地 provider profile。
+- 构建 provider health check 和模型 capability tags。
+- 在 provider 管理稳定后继续扩展 Agent template studio。
+
+## 贡献
+
+基础稳定后欢迎贡献。请保持改动小而清晰，包含行为导向测试，使用英文 commit message 和代码注释，并且不要在真实 release 存在并验证之前添加 package-registry 安装声明。
 
 ## 许可证
 
-MIT
+Agent Hangar 基于 [MIT License](LICENSE) 发布。
+
+## AI 辅助维护
+
+本项目在 AI 辅助下编写和维护，并通过本地测试、review 和 GitHub Actions 验证。
