@@ -10,7 +10,7 @@ Agent frameworks are useful as libraries, but operators still need a clear deskt
 
 ## Current status
 
-Agent Hangar is in **active-development** foundation work. The Rust core harness currently has passing tests for provider normalization, secret-safe provider cards, encrypted local provider profile helpers, agent templates, status transitions, and inter-agent message routing. The frontend harness also normalizes provider health summaries and model capability tags for operator-facing provider cards. The Tauri/React shell is scaffolded with provider and agent state panels.
+Agent Hangar is in **active-development** foundation work. The Rust core harness currently has passing tests for provider normalization, secret-safe provider cards, encrypted local provider profile helpers, agent templates, status transitions, and inter-agent message routing. The frontend harness also normalizes provider health summaries and model capability tags for operator-facing provider cards. The Tauri/React shell now includes a local provider profile management panel plus agent state panels.
 
 The app is not packaged for end users yet. Use the source checkout workflow below for development and evaluation.
 
@@ -21,9 +21,10 @@ Implemented foundation pieces:
 - Rust workspace with an `agent-hangar-core` crate for provider and agent runtime primitives.
 - Provider cards that keep secrets out of display/debug output.
 - Pure frontend harness helpers for encrypted local provider profiles with injectable crypto for future Tauri secure storage.
+- Local provider profile create/edit/delete UI flow with secret-safe key status, write-only replacement key handling, and model discovery health summaries for missing-key, degraded, stale, and empty states.
 - Normalized model metadata, conservative capability tags, and provider health summaries for future provider integrations.
 - Agent templates, runtime status transitions, and typed inter-agent message routing.
-- React/Tauri shell scaffold for provider overview, provider health/capability summaries, and agent state panels.
+- React/Tauri shell scaffold for provider profile management, provider health/capability summaries, and agent state panels.
 - GitHub Actions CI for Rust and frontend verification.
 
 Planned capabilities:
@@ -82,6 +83,7 @@ No production provider configuration is required yet. The foundation configurati
 - Provider profiles can be represented locally with encrypted API keys.
 - Secrets must not appear in debug strings, exported cards, logs, or UI snapshots.
 - Provider cards expose secret-safe health summaries and capability tag counts derived from local model metadata.
+- The browser demo crypto is intentionally demo-only; production storage should replace it with Tauri-backed secure storage before real provider keys are used.
 
 ## Development
 
@@ -113,10 +115,9 @@ See [ROADMAP.md](ROADMAP.md) for the active-development cadence, Now/Next/Later 
 
 Current focus:
 
-- Complete early provider-management ergonomics on top of the reproducible frontend install flow.
-- Wire encrypted local provider profiles into the desktop provider-management flow.
-- Connect provider profile editing and model discovery refresh states to the desktop provider-management flow.
-- Grow the agent template studio after provider management is dependable.
+- Keep provider profile editing secret-safe while Tauri secure storage and real model discovery adapters are added.
+- Grow the agent template studio with prompt CRUD, variables, version history, and provider/model validation.
+- Add execution graph scaffolding once provider and template foundations are dependable.
 
 ## Contributing
 
