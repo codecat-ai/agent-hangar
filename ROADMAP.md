@@ -17,28 +17,25 @@ Agent Hangar is a young project. It should receive active investment only while 
    - Verify Rust core tests, frontend build, frontend tests, and CI together.
 2. **Provider-management foundation**
    - Encrypted local provider profile helpers are implemented in the frontend harness with injectable crypto for later Tauri secure storage.
+   - Local provider profile create/edit/delete UI flow is implemented with deterministic controller tests and React tests.
    - Provider cards now include secret-safe health summaries for missing keys, empty inventories, ready providers, degraded providers, and stale model inventories.
    - Normalized model capability tags now summarize text, vision, reasoning, embeddings, fast, long-context, and tool-use support for operator decisions.
-   - Preserve the secret-safe display/debug contract as provider profile editing and model discovery refresh flows reach UI integration.
-3. **Operator-facing shell hardening**
+   - Preserve the secret-safe display/debug contract as Tauri secure storage and real model discovery refresh adapters are added.
+3. **Agent template studio**
+   - Build prompt template CRUD with variables and version history as the next active-development item.
+   - Add role presets for planner, researcher, implementer, reviewer, and operator.
+   - Validate missing model, tool, provider, and escalation policies against the provider profile foundation.
+4. **Operator-facing shell hardening**
    - Turn provider and agent panels from static scaffolding into test-backed UI states.
    - Add empty, loading, error, and disconnected states before introducing long-running execution.
 
 ## Next
 
-1. **Agent template studio**
-   - Prompt template CRUD with variables and version history.
-   - Role presets for planner, researcher, implementer, reviewer, and operator.
-   - Validation for missing model, tool, provider, and escalation policies.
-2. **Provider profile UI flow**
-   - Add local create/edit/delete screens for provider profiles without exposing encrypted or raw API key material.
-   - Wire model discovery refresh state into the existing health and capability summaries.
-   - Add deterministic UI tests for missing-key, degraded, stale, and empty provider states.
-3. **Execution graph**
+1. **Execution graph**
    - Create tasks, assign agent teams, spawn subagents, and stream events.
    - Support pause, resume, cancel, retry, and durable audit logs.
    - Add inter-agent inbox views for delegation, review, broadcast, and escalation.
-4. **Demo workspace**
+2. **Demo workspace**
    - Include a deterministic local demo showing a small team moving a task from planning to review.
    - Keep demo data free of real secrets, tokens, customer data, or external commands.
 
