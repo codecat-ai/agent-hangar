@@ -18,6 +18,8 @@ describe('run evidence export formatter', () => {
         'handoff-requested': 0,
         'review-completed': 0,
         'node-completed': 0,
+        'node-blocked': 0,
+        'node-failed': 0,
       },
       eventStatusCounts: {
         accepted: 1,

@@ -5,8 +5,7 @@ import { ExecutionGraphPanel } from './ExecutionGraphPanel';
 import { ProviderProfilePanel } from './ProviderProfilePanel';
 import { TemplateStudioPanel } from './TemplateStudioPanel';
 import { createAgentRun, transitionRun } from './harness/agentRuntime';
-import { buildDemoWorkspaceSeed } from './harness/demoWorkspace';
-import { replayExecutionTrail } from './harness/executionTrail';
+import { listDemoWorkspaceScenarios } from './harness/demoWorkspace';
 import { type NormalizedModel } from './harness/providerCatalog';
 import { createProfileFromDraft } from './harness/providerProfileFlow';
 import { localDemoProviderProfileCrypto } from './harness/providerProfiles';
@@ -91,10 +90,7 @@ const escalationPolicies = [
   { id: 'default-escalation', label: 'Default escalation' },
   { id: 'review-escalation', label: 'Review escalation' },
 ];
-const demoWorkspace = buildDemoWorkspaceSeed();
-const demoTrail = { graph: demoWorkspace.graph, trail: demoWorkspace.trail };
-const demoTrailSummary = replayExecutionTrail(demoTrail.graph, demoTrail.trail);
-const demoCollaborationItems = demoWorkspace.collaborationItems;
+const demoScenarios = listDemoWorkspaceScenarios();
 const runs = [
   transitionRun(createAgentRun('task-1', 'planner'), 'working'),
   transitionRun(createAgentRun('task-1', 'researcher'), 'completed'),
@@ -123,7 +119,7 @@ function App() {
           providerOptions={templateProviderOptions}
           escalationPolicies={escalationPolicies}
         />
-        <ExecutionGraphPanel graph={demoTrail.graph} trailSummary={demoTrailSummary} collaborationItems={demoCollaborationItems} />
+        <ExecutionGraphPanel demoScenarios={demoScenarios} initialDemoScenarioId="coordination-happy-path" />
         <div className="panel">
           <h2>Agent runway</h2>
           {runs.map((r) => (

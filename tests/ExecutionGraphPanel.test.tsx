@@ -3,7 +3,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { describe, expect, it, vi } from 'vitest';
 import { ExecutionGraphPanel } from '../src/ExecutionGraphPanel';
 import { normalizeCollaborationInbox } from '../src/harness/collaborationAudit';
-import { buildDemoWorkspaceSeed } from '../src/harness/demoWorkspace';
+import { getDemoWorkspaceScenario, listDemoWorkspaceScenarios, buildDemoWorkspaceSeed } from '../src/harness/demoWorkspace';
 import { buildDemoExecutionTrail, replayExecutionTrail } from '../src/harness/executionTrail';
 import { createExecutionGraphFromTemplates } from '../src/harness/executionGraph';
 import { createPromptTemplate } from '../src/harness/promptTemplates';
@@ -103,6 +103,37 @@ describe('ExecutionGraphPanel', () => {
     expect(within(demoSummary).getByText('delegation 1 · review 1 · broadcast 1 · escalation 1')).toBeInTheDocument();
     expect(within(demoSummary).getByText('Next operator action')).toBeInTheDocument();
     expect(within(demoSummary).getByText('Resolve 1 urgent escalation before starting more local execution.')).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/apiKey|encryptedKeyMaterial|sk-[A-Za-z0-9._-]{8,}|customer[A-Za-z0-9_-]*|\bcurl\b|\bnpm\s+(?:run|install|exec|test|start)\b/);
+  });
+
+  it('switches local demo scenarios with an accessible selector and refreshes graph, trail, collaboration, audit, and next-action summaries', () => {
+    const scenarios = listDemoWorkspaceScenarios();
+
+    render(<ExecutionGraphPanel demoScenarios={scenarios} initialDemoScenarioId="coordination-happy-path" />);
+
+    expect(screen.getByLabelText('Local demo scenario')).toHaveValue('coordination-happy-path');
+    expect(screen.getByText('Coordination happy path')).toBeInTheDocument();
+    expect(screen.getByText('11 events')).toBeInTheDocument();
+    expect(screen.getByText('4 completed')).toBeInTheDocument();
+    expect(screen.getByText('demo-planner · completed')).toBeInTheDocument();
+    expect(screen.getByText('delegation 1 · review 1 · broadcast 1 · escalation 1')).toBeInTheDocument();
+    expect(screen.getAllByText('Resolve 1 urgent escalation before starting more local execution.').length).toBeGreaterThan(0);
+
+    fireEvent.change(screen.getByLabelText('Local demo scenario'), { target: { value: 'blocked-failure-recovery' } });
+
+    expect(screen.getByLabelText('Local demo scenario')).toHaveValue('blocked-failure-recovery');
+    expect(screen.getByText('Blocked failure recovery')).toBeInTheDocument();
+    expect(screen.getByText('Recovery implementer')).toBeInTheDocument();
+    expect(screen.getByText('implementer · failed')).toBeInTheDocument();
+    expect(screen.getByText('12 events')).toBeInTheDocument();
+    expect(screen.getAllByText('2 completed').length).toBeGreaterThan(0);
+    expect(screen.getByText('demo-recovery-implementer · failed')).toBeInTheDocument();
+    expect(screen.getByText('Retry')).toBeInTheDocument();
+    expect(screen.getByText('delegation 1 · review 1 · broadcast 1 · escalation 2')).toBeInTheDocument();
+    expect(screen.getByText('2 urgent')).toBeInTheDocument();
+    expect(screen.getByText('2 audit entries')).toBeInTheDocument();
+    expect(screen.getByText('- Unresolved escalations: 1')).toBeInTheDocument();
+    expect(screen.getByText('Escalate failed implementation review')).toBeInTheDocument();
     expect(document.body.textContent).not.toMatch(/apiKey|encryptedKeyMaterial|sk-[A-Za-z0-9._-]{8,}|customer[A-Za-z0-9_-]*|\bcurl\b|\bnpm\s+(?:run|install|exec|test|start)\b/);
   });
 
