@@ -4,7 +4,7 @@
 
 - **Maturity:** `active-development`
 - **Planned cadence:** 2-4 focused sessions per week during foundation hardening.
-- **Current phase:** Foundation, provider management, template studio, execution graph, and local evidence export groundwork.
+- **Current phase:** Foundation, provider management, template studio, execution graph, local evidence export, and guarded local execution-control groundwork.
 - **Category:** Local-first desktop productivity / multi-agent operations UI.
 
 Agent Hangar is a young project. It should receive active investment only while each session advances a product-shaped workflow: reproducible setup, safe provider management, prompt/template governance, task execution, observability, or usable demo evidence. Avoid adding decorative UI or narrow options before the core operator workflow is dependable.
@@ -30,17 +30,19 @@ Agent Hangar is a young project. It should receive active investment only while 
    - Validation now covers duplicate node ids, missing edge endpoints, self cycles, dependency cycles, unreachable non-start nodes, and blocked/missing template bindings.
    - Secret-safe operator summaries report node/edge counts, status counts, issue counts, and suggested next runnable nodes without raw API keys or encrypted key material.
    - Pure deterministic execution trail helpers now replay schema-versioned local events for task creation, planning, assignment, handoff/review, and completion into secret-safe summaries with event/status counts, ordered timeline entries, latest node statuses, next runnable nodes, and validation issue counts.
-   - A React execution graph preview shows graph counts, issue summaries, next runnable nodes, deterministic local execution trail evidence, and a local-only run evidence export preview/copy action.
+   - A React execution graph preview shows graph counts, issue summaries, next runnable nodes, deterministic local execution trail evidence, guarded local execution controls, and a local-only run evidence export preview/copy action.
    - A pure deterministic run evidence export formatter now produces schema-versioned, secret-safe Markdown and preview data from trail summaries, graph validation issues, graph status counts, next runnable nodes, and timeline evidence.
+   - Pure guarded execution-control helpers now derive allowed local pause, resume, cancel, and retry actions, apply clone-safe deterministic state transitions with injected clock/actor values, reject invalid completed-state actions with typed issues, and emit sanitized audit entries.
+   - The local demo UI now exposes allowed control buttons only for the selected run/node state and previews sanitized status/audit results without real provider execution or external commands.
 5. **Operator-facing shell hardening**
    - Turn provider and agent panels from static scaffolding into test-backed UI states.
    - Add empty, loading, error, and disconnected states before introducing long-running execution.
 
 ## Next
 
-1. **Execution controls**
-   - Support pause, resume, cancel, retry, and durable audit logs.
+1. **Collaboration inbox and audit history**
    - Add inter-agent inbox views for delegation, review, broadcast, and escalation.
+   - Expand the guarded local-control audit preview into a durable local audit-history surface while preserving secret-safe output.
 2. **Demo workspace expansion**
    - Extend the deterministic local demo from replay evidence into a fuller workspace showing planner, researcher, implementer, and reviewer coordination.
    - Keep demo data free of real secrets, tokens, customer data, or external commands.

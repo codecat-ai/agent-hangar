@@ -1,9 +1,18 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Clipboard, GitBranch } from 'lucide-react';
+import {
+  applyExecutionControlAction,
+  deriveAllowedExecutionControlActions,
+  type ExecutionControlAction,
+  type ExecutionControlAuditEntry,
+  type ExecutionControlState,
+  type ExecutionControlStatus,
+} from './harness/executionControls';
 import {
   buildExecutionGraphSummary,
   validateExecutionGraph,
   type ExecutionGraph,
+  type ExecutionNodeStatus,
 } from './harness/executionGraph';
 import { type ExecutionTrailSummary } from './harness/executionTrail';
 import { formatRunEvidenceExport } from './harness/runEvidenceExport';
@@ -19,18 +28,54 @@ export function ExecutionGraphPanel({ graph, trailSummary, copyRunEvidence }: Ex
   const [copyState, setCopyState] = useState<'idle' | 'copied'>('idle');
   const issues = useMemo(() => validateExecutionGraph(graph), [graph]);
   const summary = useMemo(() => buildExecutionGraphSummary(graph), [graph]);
+  const initialControlState = useMemo(
+    () => (trailSummary ? createInitialControlState(graph, trailSummary.latestNodeStatuses) : undefined),
+    [graph, trailSummary],
+  );
+  const [controlState, setControlState] = useState<ExecutionControlState | undefined>(initialControlState);
+  const [controlIssue, setControlIssue] = useState<string | undefined>();
+  const [latestAuditEntry, setLatestAuditEntry] = useState<ExecutionControlAuditEntry | undefined>();
   const runEvidenceExport = useMemo(() => (
     trailSummary
       ? formatRunEvidenceExport({ trailSummary, graphSummary: summary, graphIssues: issues })
       : undefined
   ), [issues, summary, trailSummary]);
+  const allowedControlActions = useMemo(
+    () => (controlState ? deriveAllowedExecutionControlActions(controlState) : []),
+    [controlState],
+  );
   const blockingLabel = `${summary.blockingIssueCount} blocking ${summary.blockingIssueCount === 1 ? 'issue' : 'issues'}`;
+
+  useEffect(() => {
+    setControlState(initialControlState);
+    setControlIssue(undefined);
+    setLatestAuditEntry(undefined);
+  }, [initialControlState]);
+
   const handleCopyRunEvidence = () => {
     if (!runEvidenceExport) {
       return;
     }
     const copy = copyRunEvidence ?? ((markdown: string) => navigator.clipboard?.writeText(markdown));
     void Promise.resolve(copy(runEvidenceExport.markdown)).then(() => setCopyState('copied'));
+  };
+  const handleControlAction = (action: ExecutionControlAction) => {
+    if (!controlState) {
+      return;
+    }
+    const result = applyExecutionControlAction(controlState, action, {
+      actorId: 'operator-local-demo',
+      clock: () => '2026-05-23T10:08:00.000Z',
+      reason: 'Local deterministic demo control.',
+    });
+    setControlState(result.state);
+    if (result.ok) {
+      setLatestAuditEntry(result.auditEntry);
+      setControlIssue(undefined);
+    } else {
+      setLatestAuditEntry(undefined);
+      setControlIssue(result.issue.message);
+    }
   };
 
   return (
@@ -112,6 +157,41 @@ export function ExecutionGraphPanel({ graph, trailSummary, copyRunEvidence }: Ex
         </div>
       ) : null}
 
+      {trailSummary && controlState ? (
+        <section className="execution-controls" aria-labelledby="execution-controls-heading">
+          <div className="trail-heading">
+            <div>
+              <h3 id="execution-controls-heading">Guarded execution controls</h3>
+              <p>{controlState.nodeId ?? controlState.runId} · {controlState.status}</p>
+            </div>
+            <div className="tag-row" aria-label="Allowed guarded actions">
+              {allowedControlActions.length > 0 ? allowedControlActions.map((action) => (
+                <button
+                  key={action}
+                  type="button"
+                  onClick={() => handleControlAction(action)}
+                  aria-label={`${formatActionLabel(action)} local run ${controlState.nodeId ?? controlState.runId}`}
+                >
+                  {formatActionLabel(action)}
+                </button>
+              )) : <span className="tag muted">No actions</span>}
+            </div>
+          </div>
+          {allowedControlActions.length === 0 ? (
+            <p className="empty-state">No guarded actions are available for this local state.</p>
+          ) : null}
+          {latestAuditEntry ? (
+            <div className="control-audit-preview">
+              <p role="status">{controlState.nodeId ?? controlState.runId} is {controlState.status}.</p>
+              <small>
+                {latestAuditEntry.actorId} · {latestAuditEntry.action} · {latestAuditEntry.fromStatus} -&gt; {latestAuditEntry.toStatus} · {latestAuditEntry.occurredAt}
+              </small>
+            </div>
+          ) : null}
+          {controlIssue ? <p className="form-error" role="alert">{controlIssue}</p> : null}
+        </section>
+      ) : null}
+
       {runEvidenceExport ? (
         <div className="run-evidence-preview" aria-labelledby="run-evidence-heading">
           <div className="trail-heading">
@@ -136,4 +216,37 @@ export function ExecutionGraphPanel({ graph, trailSummary, copyRunEvidence }: Ex
       ) : null}
     </section>
   );
+}
+
+function createInitialControlState(
+  graph: ExecutionGraph,
+  latestNodeStatuses: Record<string, ExecutionNodeStatus>,
+): ExecutionControlState | undefined {
+  const candidates = graph.nodes.map((node) => {
+    const status = toControlStatus(latestNodeStatuses[node.id] ?? node.status);
+    return {
+      node,
+      status,
+      allowedActions: deriveAllowedExecutionControlActions({ status }),
+    };
+  });
+  const selected = candidates.find((candidate) => candidate.allowedActions.length > 0) ?? candidates[0];
+  if (!selected) {
+    return undefined;
+  }
+  return {
+    schemaVersion: 'agent-hangar.execution-control-state.v1',
+    runId: `${graph.workspaceId}:${selected.node.id}`,
+    nodeId: selected.node.id,
+    status: selected.status,
+    auditLog: [],
+  };
+}
+
+function toControlStatus(status: ExecutionNodeStatus): ExecutionControlStatus {
+  return status;
+}
+
+function formatActionLabel(action: ExecutionControlAction): string {
+  return action.slice(0, 1).toUpperCase() + action.slice(1);
 }
