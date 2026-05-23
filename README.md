@@ -10,7 +10,7 @@ Agent frameworks are useful as libraries, but operators still need a clear deskt
 
 ## Current status
 
-Agent Hangar is in **active-development** foundation work. The Rust core harness currently has passing tests for provider normalization, secret-safe provider cards, encrypted local provider profile helpers, agent templates, status transitions, and inter-agent message routing. The frontend harness also normalizes provider health summaries and model capability tags for operator-facing provider cards, and now includes local-first prompt template, execution graph, deterministic demo execution trail, and local run-evidence export scaffolding with role presets, bindings, version history, workspace-aware validation, directed handoff/dependency edges, runnable-node summaries, timeline replay, and import/export-ready validation reports. The Tauri/React shell includes local provider profile management, a template studio foundation, an execution graph preview with local trail counts, a local-only run evidence export preview/copy action, and agent state panels.
+Agent Hangar is in **active-development** foundation work. The Rust core harness currently has passing tests for provider normalization, secret-safe provider cards, encrypted local provider profile helpers, agent templates, status transitions, and inter-agent message routing. The frontend harness also normalizes provider health summaries and model capability tags for operator-facing provider cards, and now includes local-first prompt template, execution graph, deterministic demo execution trail, local run-evidence export, and guarded local execution-control scaffolding with role presets, bindings, version history, workspace-aware validation, directed handoff/dependency edges, runnable-node summaries, timeline replay, audit entries, and import/export-ready validation reports. The Tauri/React shell includes local provider profile management, a template studio foundation, an execution graph preview with local trail counts, a guarded execution controls section for local pause/resume/cancel/retry state transitions, a local-only run evidence export preview/copy action, and agent state panels.
 
 The app is not packaged for end users yet. Use the source checkout workflow below for development and evaluation.
 
@@ -28,6 +28,8 @@ Implemented foundation pieces:
 - React execution graph preview for graph counts, issue summaries, next runnable nodes, deterministic local execution trail timeline entries, and local-only run evidence export preview/copy.
 - Pure deterministic execution trail helpers with schema-versioned local events, replay summaries, event/status counts, latest node statuses, secret-safe timeline notes, unknown-node issues, and placeholder-only demo workspace data.
 - Pure deterministic run evidence export formatter with schema-versioned Markdown preview data for trail summaries, graph validation issues, status counts, next runnable nodes, and timeline evidence.
+- Pure guarded execution-control helpers for deriving allowed local pause, resume, cancel, and retry actions, applying clone-safe state transitions with an injected clock and actor id, returning typed invalid-action issues, and producing secret-safe audit entries.
+- React guarded execution controls for the local demo run/node state, showing allowed actions only and previewing sanitized audit results without executing real providers or external commands.
 - Normalized model metadata, conservative capability tags, and provider health summaries for future provider integrations.
 - Agent templates, runtime status transitions, and typed inter-agent message routing.
 - React/Tauri shell scaffold for provider profile management, prompt template management, provider health/capability summaries, and agent state panels.
@@ -79,7 +81,7 @@ The current foundation is easiest to inspect through tests:
 - `cargo test -p agent-hangar-core` exercises provider normalization and runtime state behavior.
 - Frontend tests validate provider profiles, prompt templates, execution graph and trail scaffolding, and React shell behavior once dependencies are installed.
 
-The current demo graph, local execution trail, and run evidence export preview show a planner, researcher, and reviewer moving a task through creation, planning, assignment, handoff, review, and completion without real provider calls, network calls, shell commands, secrets, or customer data.
+The current demo graph, local execution trail, guarded execution controls, and run evidence export preview show a planner, researcher, and reviewer moving a task through creation, planning, assignment, handoff, review, completion, and safe local control transitions without real provider calls, network calls, shell commands, secrets, or customer data.
 
 ## Configuration
 
@@ -89,6 +91,7 @@ No production provider configuration is required yet. The foundation configurati
 - Prompt templates are local records and store provider/model identifiers, not raw provider/API secrets.
 - Execution graph summaries expose node, edge, status, issue, and runnable-node counts without raw API keys or encrypted key material.
 - Local run evidence export previews re-sanitize workspace ids, actor/title/note/node text, graph issues, and trail issues before rendering deterministic Markdown.
+- Guarded execution-control audit entries sanitize operator reason/note text and never expose raw API keys, encrypted key material, tokens, customer data, or real command text.
 - Secrets must not appear in debug strings, exported cards, logs, or UI snapshots.
 - Provider cards expose secret-safe health summaries and capability tag counts derived from local model metadata.
 - The browser demo crypto is intentionally demo-only; production storage should replace it with Tauri-backed secure storage before real provider keys are used.
@@ -125,7 +128,7 @@ Current focus:
 
 - Keep provider profile editing secret-safe while Tauri secure storage and real model discovery adapters are added.
 - Keep template validation reports secret-safe as workspace import/export takes shape.
-- Extend the local demo from run evidence export preview into guarded operator controls for pause, resume, cancel, retry, and durable audit logs.
+- Expand local demo coordination views around delegation, review, broadcast, escalation, and audit history while keeping execution controls deterministic and provider-free.
 
 ## Contributing
 

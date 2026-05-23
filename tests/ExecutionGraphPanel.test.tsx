@@ -108,4 +108,45 @@ describe('ExecutionGraphPanel', () => {
     expect(copyRunEvidence.mock.calls[0]![0]).toContain('schemaVersion: agent-hangar.run-evidence-export.v1');
     expect(copyRunEvidence.mock.calls[0]![0]).toContain('## Timeline');
   });
+
+  it('shows guarded controls for a working local demo node and records pause audit text', () => {
+    const { graph, trail } = buildDemoExecutionTrail();
+    graph.nodes[1] = { ...graph.nodes[1]!, status: 'working' };
+    const trailSummary = {
+      ...replayExecutionTrail(graph, trail),
+      latestNodeStatuses: {
+        'demo-planner': 'completed' as const,
+        'demo-researcher': 'working' as const,
+        'demo-reviewer': 'queued' as const,
+      },
+    };
+
+    render(<ExecutionGraphPanel graph={graph} trailSummary={trailSummary} />);
+
+    const controls = screen.getByRole('region', { name: 'Guarded execution controls' });
+    expect(within(controls).getByText('demo-researcher · working')).toBeInTheDocument();
+    expect(within(controls).getByRole('button', { name: 'Pause local run demo-researcher' })).toBeInTheDocument();
+    expect(within(controls).getByRole('button', { name: 'Cancel local run demo-researcher' })).toBeInTheDocument();
+    expect(within(controls).queryByRole('button', { name: /Resume local run/i })).not.toBeInTheDocument();
+
+    fireEvent.click(within(controls).getByRole('button', { name: 'Pause local run demo-researcher' }));
+
+    expect(within(controls).getByRole('status')).toHaveTextContent('demo-researcher is paused.');
+    expect(within(controls).getByText('operator-local-demo · pause · working -> paused · 2026-05-23T10:08:00.000Z')).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/apiKey|sk-[A-Za-z0-9._-]{8,}|encryptedKeyMaterial/);
+  });
+
+  it('does not expose active guarded control actions for completed local demo nodes', () => {
+    const { graph, trail } = buildDemoExecutionTrail();
+    const trailSummary = replayExecutionTrail(graph, trail);
+
+    render(<ExecutionGraphPanel graph={graph} trailSummary={trailSummary} />);
+
+    const controls = screen.getByRole('region', { name: 'Guarded execution controls' });
+    expect(within(controls).getByText('demo-planner · completed')).toBeInTheDocument();
+    expect(within(controls).getByText('No guarded actions are available for this local state.')).toBeInTheDocument();
+    expect(within(controls).queryByRole('button', { name: /Pause local run/i })).not.toBeInTheDocument();
+    expect(within(controls).queryByRole('button', { name: /Cancel local run/i })).not.toBeInTheDocument();
+    expect(within(controls).queryByRole('button', { name: /Retry local run/i })).not.toBeInTheDocument();
+  });
 });
