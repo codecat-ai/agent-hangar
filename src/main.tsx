@@ -2,12 +2,15 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import './styles.css';
 import { ProviderProfilePanel } from './ProviderProfilePanel';
+import { TemplateStudioPanel } from './TemplateStudioPanel';
 import { createAgentRun, transitionRun } from './harness/agentRuntime';
 import { type NormalizedModel } from './harness/providerCatalog';
 import { createProfileFromDraft } from './harness/providerProfileFlow';
 import { localDemoProviderProfileCrypto } from './harness/providerProfiles';
+import { createTemplateFromPreset } from './harness/promptTemplates';
 
 const demoClock = () => new Date('2026-05-23T10:00:00.000Z');
+const demoTemplateClock = () => '2026-05-23T10:00:00.000Z';
 const demoNow = '2026-05-23T10:00:00.000Z';
 const demoProfiles = [
   createProfileFromDraft({
@@ -55,6 +58,36 @@ const demoModelsByProvider: Record<string, NormalizedModel[]> = {
     { id: 'gemini-2.5-pro', displayName: 'Gemini 2.5 Pro', providerKind: 'gemini' },
   ],
 };
+const demoTemplates = [
+  createTemplateFromPreset('planner', {
+    id: () => 'template-planner-demo',
+    clock: demoTemplateClock,
+    providerProfileId: 'openai-main',
+    modelId: 'gpt-4.1',
+    escalationPolicyId: 'default-escalation',
+  }),
+  createTemplateFromPreset('reviewer', {
+    id: () => 'template-reviewer-demo',
+    clock: demoTemplateClock,
+    providerProfileId: 'anthropic-main',
+    modelId: 'claude-sonnet-4-5',
+    escalationPolicyId: 'review-escalation',
+  }),
+];
+let demoTemplateIdCounter = 0;
+const demoTemplateIdSource = () => {
+  demoTemplateIdCounter += 1;
+  return `template-local-${demoTemplateIdCounter}`;
+};
+const templateProviderOptions = demoProfiles.map((profile) => ({
+  id: profile.id,
+  label: profile.displayName,
+  modelIds: (demoModelsByProvider[profile.id] ?? []).map((model) => model.id),
+}));
+const escalationPolicies = [
+  { id: 'default-escalation', label: 'Default escalation' },
+  { id: 'review-escalation', label: 'Review escalation' },
+];
 const runs = [
   transitionRun(createAgentRun('task-1', 'planner'), 'working'),
   transitionRun(createAgentRun('task-1', 'researcher'), 'completed'),
@@ -75,6 +108,13 @@ function App() {
           now={demoNow}
           initialProfiles={demoProfiles}
           modelsByProvider={demoModelsByProvider}
+        />
+        <TemplateStudioPanel
+          clock={demoTemplateClock}
+          idSource={demoTemplateIdSource}
+          initialTemplates={demoTemplates}
+          providerOptions={templateProviderOptions}
+          escalationPolicies={escalationPolicies}
         />
         <div className="panel">
           <h2>Agent runway</h2>
