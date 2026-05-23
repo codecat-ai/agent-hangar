@@ -4,7 +4,7 @@
 
 - **Maturity:** `active-development`
 - **Planned cadence:** 2-4 focused sessions per week during foundation hardening.
-- **Current phase:** Foundation, provider management, template studio, execution graph, local evidence export, guarded local execution controls, collaboration inbox persistence, and audit-history preview groundwork.
+- **Current phase:** Foundation, provider management, template studio, execution graph, expanded local demo workspace, local evidence export, guarded local execution controls, collaboration inbox persistence, and audit-history preview groundwork.
 - **Category:** Local-first desktop productivity / multi-agent operations UI.
 
 Agent Hangar is a young project. It should receive active investment only while each session advances a product-shaped workflow: reproducible setup, safe provider management, prompt/template governance, task execution, observability, or usable demo evidence. Avoid adding decorative UI or narrow options before the core operator workflow is dependable.
@@ -30,6 +30,7 @@ Agent Hangar is a young project. It should receive active investment only while 
    - Validation now covers duplicate node ids, missing edge endpoints, self cycles, dependency cycles, unreachable non-start nodes, and blocked/missing template bindings.
    - Secret-safe operator summaries report node/edge counts, status counts, issue counts, and suggested next runnable nodes without raw API keys or encrypted key material.
    - Pure deterministic execution trail helpers now replay schema-versioned local events for task creation, planning, assignment, handoff/review, and completion into secret-safe summaries with event/status counts, ordered timeline entries, latest node statuses, next runnable nodes, and validation issue counts.
+   - Pure deterministic demo workspace seed helpers now produce schema-versioned, clone-safe, secret-safe planner, researcher, implementer, and reviewer coordination data for graph, trail, collaboration, and audit-history preview surfaces.
    - A React execution graph preview shows graph counts, issue summaries, next runnable nodes, deterministic local execution trail evidence, guarded local execution controls, and a local-only run evidence export preview/copy action.
    - A pure deterministic run evidence export formatter now produces schema-versioned, secret-safe Markdown and preview data from trail summaries, graph validation issues, graph status counts, next runnable nodes, and timeline evidence.
    - Pure guarded execution-control helpers now derive allowed local pause, resume, cancel, and retry actions, apply clone-safe deterministic state transitions with injected clock/actor values, reject invalid completed-state actions with typed issues, and emit sanitized audit entries.
@@ -37,22 +38,23 @@ Agent Hangar is a young project. It should receive active investment only while 
    - Pure collaboration inbox helpers now normalize schema-versioned delegation, review, broadcast, and escalation items; trim text; reject invalid type, status, priority, timestamp, schema, id, and title fields with typed issues; sort unresolved high-priority recent records first; and redact secret-looking body/note content.
    - Pure audit-history preview helpers now combine guarded execution-control audit entries with collaboration items into deterministic counts, recent sanitized entries, unresolved escalation counts, next-action hints, and secret-safe Markdown preview data.
    - Pure collaboration mutation helpers now acknowledge and resolve inbox items by id, reject unknown ids and invalid resolved-item transitions with typed issues, keep clone-safe sorted records, append schema-versioned sanitized mutation audit entries with injected clock/actor values, and return schema-versioned local persistence payloads with sanitized audit-history previews.
-   - The local demo UI now shows collaboration inbox counts, unresolved items, relevant acknowledge/resolve controls, localStorage persistence with safe fallback, mutation status text, recent sanitized audit history, next-action hints, and copyable Markdown preview data inside the execution graph panel.
+   - The local demo UI now shows a compact demo workspace summary, collaboration inbox counts, unresolved items, relevant acknowledge/resolve controls, localStorage persistence with safe fallback, mutation status text, recent sanitized audit history, next-action hints, and copyable Markdown preview data inside the execution graph panel.
 5. **Operator-facing shell hardening**
    - Turn provider and agent panels from static scaffolding into test-backed UI states.
    - Add empty, loading, error, and disconnected states before introducing long-running execution.
 
 ## Next
 
-1. **Demo workspace expansion**
-   - Extend the deterministic local demo from replay evidence into a fuller workspace showing planner, researcher, implementer, and reviewer coordination.
-   - Add richer seeded collaboration items for delegation, review, broadcast, and escalation without real secrets, tokens, customer data, network calls, or shell commands.
-2. **Collaboration triage ergonomics**
+1. **Collaboration triage ergonomics**
    - Add operator filters or compact views for collaboration and audit history once the seeded demo has enough items to justify them.
    - Keep collaboration mutation state deterministic, schema-versioned, and provider-free.
-3. **Workspace portability**
+2. **Workspace portability**
    - Reuse template validation reports in source-checkout workspace import/export flows.
    - Keep bundle previews free of raw provider API keys and encrypted key material.
+3. **Demo evidence scenarios**
+   - Add a second deterministic local scenario for blocked or failed work so guarded controls, escalation handling, and audit previews can be exercised without providers.
+   - Keep every scenario source-checkout friendly and free of real secrets, tokens, customer data, network calls, and shell commands.
+
 ## Later
 
 1. **Observability and replay**
