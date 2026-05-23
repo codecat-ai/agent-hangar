@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Pencil, Plus, Save, X } from 'lucide-react';
 import {
+  buildPromptTemplateValidationReport,
   createPromptTemplate,
   createTemplateFromPreset,
   promptTemplateRoles,
@@ -11,6 +12,7 @@ import {
   type PromptTemplateIdSource,
   type PromptTemplateRecord,
   type PromptTemplateRole,
+  type WorkspaceToolRecord,
 } from './harness/promptTemplates';
 
 export interface TemplateProviderOption {
@@ -23,6 +25,23 @@ export interface TemplateProviderOption {
 export interface EscalationPolicyOption {
   id: string;
   label: string;
+  mode?: string;
+  target?: {
+    providerProfileId?: string;
+    provider?: string;
+    modelId?: string;
+    model?: string;
+    queue?: string;
+  };
+  providerProfileId?: string;
+  provider?: string;
+  modelId?: string;
+  model?: string;
+  queue?: string;
+  conditions?: Array<{
+    expression?: string;
+    variables?: string[];
+  }>;
 }
 
 export interface TemplateStudioPanelProps {
@@ -31,6 +50,7 @@ export interface TemplateStudioPanelProps {
   initialTemplates: PromptTemplateRecord[];
   providerOptions: TemplateProviderOption[];
   escalationPolicies: EscalationPolicyOption[];
+  toolRecords?: WorkspaceToolRecord[];
 }
 
 interface TemplateDraft {
@@ -50,6 +70,7 @@ export function TemplateStudioPanel({
   initialTemplates,
   providerOptions,
   escalationPolicies,
+  toolRecords = [],
 }: TemplateStudioPanelProps) {
   const [templates, setTemplates] = useState<PromptTemplateRecord[]>(initialTemplates);
   const [editingId, setEditingId] = useState<string | undefined>(initialTemplates[0]?.id);
@@ -210,6 +231,10 @@ export function TemplateStudioPanel({
         {templates.length === 0 ? <p className="empty-state">No prompt templates yet.</p> : null}
         {templates.map((template) => {
           const issues = validatePromptTemplate(template);
+          const report = buildPromptTemplateValidationReport(template, {
+            tools: toolRecords,
+            escalationPolicies,
+          });
           const status = issues.length === 0 ? 'Valid' : 'Needs attention';
           return (
             <article className="card provider-card template-card" key={template.id} data-testid={`template-card-${template.id}`}>
@@ -220,12 +245,15 @@ export function TemplateStudioPanel({
                 </div>
                 <div className="summary-grid">
                   <span>{status}</span>
+                  <span>Validation: {report.summary.status}</span>
                   <span>Variables: {template.variables.length > 0 ? template.variables.join(', ') : 'none'}</span>
+                  <span>Tools: {report.summary.requiredToolCount} required · {report.summary.missingToolCount} missing · {report.summary.disabledToolCount} disabled</span>
+                  <span>Policy variables: {report.summary.unknownPolicyVariableCount} unknown</span>
                   <span>Versions: {template.versions.length}</span>
                 </div>
-                {issues.length > 0 ? (
+                {report.issues.length > 0 ? (
                   <ul className="issue-list">
-                    {issues.map((issue) => <li key={`${template.id}-${issue.code}-${issue.message}`}>{issue.message}</li>)}
+                    {report.issues.map((issue) => <li key={`${template.id}-${issue.code}-${issue.message}`}>{issue.message}</li>)}
                   </ul>
                 ) : null}
               </div>

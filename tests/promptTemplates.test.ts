@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  buildPromptTemplateValidationReport,
   createTemplateFromPreset,
   createPromptTemplate,
   deletePromptTemplateById,
@@ -122,5 +123,136 @@ describe('prompt template harness', () => {
       { code: 'missing-escalation-policy', message: 'Template must bind to an escalation policy.' },
       { code: 'unknown-policy-variable', message: 'Policy binding references unknown template variable: missing_variable.' },
     ]);
+  });
+
+  it('builds a deterministic workspace validation report for tool and escalation policy requirements', () => {
+    const template = createPromptTemplate({
+      id: 'template-operator',
+      title: 'Operator',
+      role: 'operator',
+      body: 'Handle {{incident}} with {{severity}}.',
+      providerProfileId: 'openai-main',
+      modelId: 'gpt-4.1',
+      escalationPolicyId: 'policy-invalid',
+      policyBindings: ['severity'],
+      requiredToolIds: ['browser', 'browser', 'shell'],
+      requiredToolNames: ['Deploy Console', 'Unknown Tool'],
+    }, clock);
+
+    const report = buildPromptTemplateValidationReport(template, {
+      tools: [
+        { id: 'browser', name: 'Browser', enabled: true },
+        { id: 'shell', name: 'Shell', enabled: false },
+        { id: 'deploy-console', name: 'Deploy Console', enabled: true },
+      ],
+      escalationPolicies: [
+        {
+          id: 'policy-invalid',
+          name: 'Invalid escalation',
+          mode: 'provider',
+          conditions: [
+            { expression: '{{incident}} == "p0"', variables: ['undeclared_policy_flag'] },
+            { expression: '{{missing_from_condition}} == true' },
+          ],
+        },
+      ],
+    });
+
+    expect(report).toEqual({
+      schemaVersion: 'agent-hangar.template-validation.v1',
+      template: { id: 'template-operator', title: 'Operator' },
+      summary: {
+        status: 'blocking',
+        blockingIssueCount: 5,
+        warningIssueCount: 1,
+        requiredToolCount: 4,
+        missingToolCount: 1,
+        disabledToolCount: 1,
+        unknownPolicyVariableCount: 2,
+      },
+      issues: [
+        {
+          code: 'duplicate-tool-requirement',
+          severity: 'warning',
+          message: 'Tool requirement is duplicated: browser.',
+          detail: { requirement: 'browser' },
+        },
+        {
+          code: 'disabled-tool',
+          severity: 'blocking',
+          message: 'Required tool is disabled: Shell.',
+          detail: { toolId: 'shell', toolName: 'Shell' },
+        },
+        {
+          code: 'missing-tool',
+          severity: 'blocking',
+          message: 'Required tool is not available in this workspace: Unknown Tool.',
+          detail: { requirement: 'Unknown Tool' },
+        },
+        {
+          code: 'missing-escalation-target',
+          severity: 'blocking',
+          message: 'Escalation policy policy-invalid must define provider/model target fields.',
+          detail: { policyId: 'policy-invalid', mode: 'provider' },
+        },
+        {
+          code: 'unknown-policy-variable',
+          severity: 'blocking',
+          message: 'Policy binding references unknown template variable: missing_from_condition.',
+          detail: { variable: 'missing_from_condition' },
+        },
+        {
+          code: 'unknown-policy-variable',
+          severity: 'blocking',
+          message: 'Policy binding references unknown template variable: undeclared_policy_flag.',
+          detail: { variable: 'undeclared_policy_flag' },
+        },
+      ],
+    });
+    expect(JSON.stringify(report)).not.toContain('sk-');
+  });
+
+  it('returns a safe compact report for valid workspace-backed templates', () => {
+    const template = createPromptTemplate({
+      id: 'template-valid',
+      title: 'Valid operator',
+      role: 'operator',
+      body: 'Handle {{incident}} and {{severity}}.',
+      providerProfileId: 'openai-main',
+      modelId: 'gpt-4.1',
+      escalationPolicyId: 'policy-valid',
+      policyBindings: ['severity'],
+      requiredToolIds: ['browser'],
+      requiredToolNames: ['Shell'],
+    }, clock);
+
+    const report = buildPromptTemplateValidationReport(template, {
+      tools: [
+        { id: 'browser', name: 'Browser', enabled: true, secretPreview: 'sk-should-not-render' },
+        { id: 'shell', name: 'Shell', enabled: true },
+      ],
+      escalationPolicies: [
+        {
+          id: 'policy-valid',
+          name: 'Valid escalation',
+          mode: 'provider',
+          providerProfileId: 'openai-main',
+          modelId: 'gpt-4.1',
+          conditions: [{ expression: '{{incident}} == "p0"', variables: ['severity'] }],
+        },
+      ],
+    });
+
+    expect(report.summary).toEqual({
+      status: 'valid',
+      blockingIssueCount: 0,
+      warningIssueCount: 0,
+      requiredToolCount: 2,
+      missingToolCount: 0,
+      disabledToolCount: 0,
+      unknownPolicyVariableCount: 0,
+    });
+    expect(report.issues).toEqual([]);
+    expect(JSON.stringify(report)).not.toContain('sk-should-not-render');
   });
 });
