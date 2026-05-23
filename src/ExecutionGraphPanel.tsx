@@ -5,13 +5,15 @@ import {
   validateExecutionGraph,
   type ExecutionGraph,
 } from './harness/executionGraph';
+import { type ExecutionTrailSummary } from './harness/executionTrail';
 
 export interface ExecutionGraphPanelProps {
   graph: ExecutionGraph;
+  trailSummary?: ExecutionTrailSummary;
   secretPreview?: string;
 }
 
-export function ExecutionGraphPanel({ graph }: ExecutionGraphPanelProps) {
+export function ExecutionGraphPanel({ graph, trailSummary }: ExecutionGraphPanelProps) {
   const issues = useMemo(() => validateExecutionGraph(graph), [graph]);
   const summary = useMemo(() => buildExecutionGraphSummary(graph), [graph]);
   const blockingLabel = `${summary.blockingIssueCount} blocking ${summary.blockingIssueCount === 1 ? 'issue' : 'issues'}`;
@@ -65,6 +67,34 @@ export function ExecutionGraphPanel({ graph }: ExecutionGraphPanelProps) {
             <li key={`${issue.code}-${issue.nodeId ?? issue.edgeId ?? issue.message}`}>{issue.message}</li>
           ))}
         </ul>
+      ) : null}
+
+      {trailSummary ? (
+        <div className="trail-preview" aria-labelledby="execution-trail-heading">
+          <div className="trail-heading">
+            <h3 id="execution-trail-heading">Local execution trail</h3>
+            <div className="summary-grid trail-summary" aria-label="Execution trail summary">
+              <span>{trailSummary.eventCount} {trailSummary.eventCount === 1 ? 'event' : 'events'}</span>
+              <span>{trailSummary.issueCount} trail {trailSummary.issueCount === 1 ? 'issue' : 'issues'}</span>
+              <span>{trailSummary.eventStatusCounts.accepted} accepted</span>
+              <span>{trailSummary.latestNodeStatuses
+                ? Object.values(trailSummary.latestNodeStatuses).filter((status) => status === 'completed').length
+                : 0} completed</span>
+            </div>
+          </div>
+          <ol className="trail-list" aria-label="Local execution timeline">
+            {trailSummary.timeline.map((entry) => (
+              <li key={entry.id}>
+                <time dateTime={entry.occurredAt}>{entry.occurredAt.slice(11, 16)}</time>
+                <div>
+                  <strong>{entry.title}</strong>
+                  <small>{entry.kind} · {entry.status}</small>
+                  {entry.note ? <p>{entry.note}</p> : null}
+                </div>
+              </li>
+            ))}
+          </ol>
+        </div>
       ) : null}
     </section>
   );

@@ -29,25 +29,25 @@ Agent Hangar is a young project. It should receive active investment only while 
    - Pure TypeScript execution graph helpers are implemented for deterministic workspace graphs with agent role/task nodes and directed dependency/handoff edges.
    - Validation now covers duplicate node ids, missing edge endpoints, self cycles, dependency cycles, unreachable non-start nodes, and blocked/missing template bindings.
    - Secret-safe operator summaries report node/edge counts, status counts, issue counts, and suggested next runnable nodes without raw API keys or encrypted key material.
-   - A React execution graph preview shows graph counts, issue summaries, and next runnable nodes.
+   - Pure deterministic execution trail helpers now replay schema-versioned local events for task creation, planning, assignment, handoff/review, and completion into secret-safe summaries with event/status counts, ordered timeline entries, latest node statuses, next runnable nodes, and validation issue counts.
+   - A React execution graph preview shows graph counts, issue summaries, next runnable nodes, and deterministic local execution trail evidence.
 5. **Operator-facing shell hardening**
    - Turn provider and agent panels from static scaffolding into test-backed UI states.
    - Add empty, loading, error, and disconnected states before introducing long-running execution.
 
 ## Next
 
-1. **Deterministic demo execution trail**
-   - Create a local-only event trail on top of the execution graph scaffold for task creation, agent assignment, handoff, review, and completion.
-   - Keep events replayable and free of provider calls, network calls, secrets, and external commands.
-2. **Execution controls**
+1. **Execution controls**
    - Support pause, resume, cancel, retry, and durable audit logs.
    - Add inter-agent inbox views for delegation, review, broadcast, and escalation.
-3. **Demo workspace**
-   - Include a deterministic local demo showing a small team moving a task from planning to review.
+2. **Demo workspace expansion**
+   - Extend the deterministic local demo from replay evidence into a fuller workspace showing planner, researcher, implementer, and reviewer coordination.
    - Keep demo data free of real secrets, tokens, customer data, or external commands.
-4. **Workspace portability**
+3. **Workspace portability**
    - Reuse template validation reports in source-checkout workspace import/export flows.
    - Keep bundle previews free of raw provider API keys and encrypted key material.
+4. **Run evidence export**
+   - Add a local export preview for trail summaries, graph validation issues, and timeline evidence before real provider execution is introduced.
 
 ## Later
 
