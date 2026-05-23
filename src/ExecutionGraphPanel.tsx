@@ -9,6 +9,11 @@ import {
   type ExecutionControlStatus,
 } from './harness/executionControls';
 import {
+  buildAuditHistoryPreview,
+  sortCollaborationInboxItems,
+  type CollaborationInboxRecord,
+} from './harness/collaborationAudit';
+import {
   buildExecutionGraphSummary,
   validateExecutionGraph,
   type ExecutionGraph,
@@ -20,12 +25,21 @@ import { formatRunEvidenceExport } from './harness/runEvidenceExport';
 export interface ExecutionGraphPanelProps {
   graph: ExecutionGraph;
   trailSummary?: ExecutionTrailSummary;
+  collaborationItems?: CollaborationInboxRecord[];
   secretPreview?: string;
   copyRunEvidence?: (markdown: string) => void | Promise<void>;
+  copyAuditHistory?: (markdown: string) => void | Promise<void>;
 }
 
-export function ExecutionGraphPanel({ graph, trailSummary, copyRunEvidence }: ExecutionGraphPanelProps) {
+export function ExecutionGraphPanel({
+  graph,
+  trailSummary,
+  collaborationItems = [],
+  copyRunEvidence,
+  copyAuditHistory,
+}: ExecutionGraphPanelProps) {
   const [copyState, setCopyState] = useState<'idle' | 'copied'>('idle');
+  const [auditCopyState, setAuditCopyState] = useState<'idle' | 'copied'>('idle');
   const issues = useMemo(() => validateExecutionGraph(graph), [graph]);
   const summary = useMemo(() => buildExecutionGraphSummary(graph), [graph]);
   const initialControlState = useMemo(
@@ -40,11 +54,23 @@ export function ExecutionGraphPanel({ graph, trailSummary, copyRunEvidence }: Ex
       ? formatRunEvidenceExport({ trailSummary, graphSummary: summary, graphIssues: issues })
       : undefined
   ), [issues, summary, trailSummary]);
+  const sortedCollaborationItems = useMemo(
+    () => sortCollaborationInboxItems(collaborationItems),
+    [collaborationItems],
+  );
+  const auditHistoryPreview = useMemo(() => (
+    buildAuditHistoryPreview({
+      auditEntries: controlState?.auditLog ?? [],
+      collaborationItems: sortedCollaborationItems,
+    })
+  ), [controlState?.auditLog, sortedCollaborationItems]);
   const allowedControlActions = useMemo(
     () => (controlState ? deriveAllowedExecutionControlActions(controlState) : []),
     [controlState],
   );
   const blockingLabel = `${summary.blockingIssueCount} blocking ${summary.blockingIssueCount === 1 ? 'issue' : 'issues'}`;
+  const unresolvedCollaborationCount = sortedCollaborationItems.filter((item) => item.status !== 'resolved').length;
+  const urgentCollaborationCount = sortedCollaborationItems.filter((item) => item.priority === 'urgent').length;
 
   useEffect(() => {
     setControlState(initialControlState);
@@ -58,6 +84,10 @@ export function ExecutionGraphPanel({ graph, trailSummary, copyRunEvidence }: Ex
     }
     const copy = copyRunEvidence ?? ((markdown: string) => navigator.clipboard?.writeText(markdown));
     void Promise.resolve(copy(runEvidenceExport.markdown)).then(() => setCopyState('copied'));
+  };
+  const handleCopyAuditHistory = () => {
+    const copy = copyAuditHistory ?? ((markdown: string) => navigator.clipboard?.writeText(markdown));
+    void Promise.resolve(copy(auditHistoryPreview.markdown)).then(() => setAuditCopyState('copied'));
   };
   const handleControlAction = (action: ExecutionControlAction) => {
     if (!controlState) {
@@ -191,6 +221,61 @@ export function ExecutionGraphPanel({ graph, trailSummary, copyRunEvidence }: Ex
           {controlIssue ? <p className="form-error" role="alert">{controlIssue}</p> : null}
         </section>
       ) : null}
+
+      <section className="collaboration-inbox" aria-labelledby="collaboration-inbox-heading">
+        <div className="trail-heading">
+          <div>
+            <h3 id="collaboration-inbox-heading">Collaboration inbox</h3>
+            <div className="summary-grid trail-summary" aria-label="Collaboration inbox summary">
+              <span>{sortedCollaborationItems.length} {sortedCollaborationItems.length === 1 ? 'item' : 'items'}</span>
+              <span>{unresolvedCollaborationCount} unresolved</span>
+              <span>{urgentCollaborationCount} urgent</span>
+            </div>
+          </div>
+        </div>
+        {sortedCollaborationItems.length > 0 ? (
+          <ol className="trail-list" aria-label="Collaboration inbox items">
+            {sortedCollaborationItems.slice(0, 4).map((item) => (
+              <li key={item.id}>
+                <time dateTime={item.createdAt}>{item.createdAt.slice(11, 16)}</time>
+                <div>
+                  <strong>{item.title}</strong>
+                  <small>{item.type} · {item.priority} · {item.status}{item.assignedAgentId ? ` · ${item.assignedAgentId}` : ''}</small>
+                  {item.body ? <p>{item.body}</p> : null}
+                  {item.note ? <p>{item.note}</p> : null}
+                </div>
+              </li>
+            ))}
+          </ol>
+        ) : (
+          <p className="empty-state">No collaboration inbox items are pending.</p>
+        )}
+      </section>
+
+      <section className="audit-history-preview" aria-labelledby="audit-history-heading">
+        <div className="trail-heading">
+          <div>
+            <h3 id="audit-history-heading">Audit history preview</h3>
+            <div className="summary-grid trail-summary" aria-label="Audit history summary">
+              <span>{auditHistoryPreview.counts.auditEntries} audit {auditHistoryPreview.counts.auditEntries === 1 ? 'entry' : 'entries'}</span>
+              <span>{auditHistoryPreview.counts.collaborationItems} collaboration {auditHistoryPreview.counts.collaborationItems === 1 ? 'item' : 'items'}</span>
+              <span>{auditHistoryPreview.counts.unresolvedEscalations} unresolved {auditHistoryPreview.counts.unresolvedEscalations === 1 ? 'escalation' : 'escalations'}</span>
+            </div>
+          </div>
+          <button className="icon-button" type="button" onClick={handleCopyAuditHistory} aria-label="Copy audit history preview" title="Copy audit history preview">
+            <Clipboard size={18} aria-hidden="true" />
+          </button>
+        </div>
+        <ul className="issue-list" aria-label="Audit history next actions">
+          {auditHistoryPreview.nextActionHints.map((hint) => <li key={hint}>{hint}</li>)}
+        </ul>
+        <pre className="run-evidence-markdown" aria-label="Audit history Markdown preview">
+          {auditHistoryPreview.markdown.split('\n').map((line, index) => (
+            <code key={`${index}-${line}`}>{line || ' '}</code>
+          ))}
+        </pre>
+        {auditCopyState === 'copied' ? <p className="copy-status" role="status">Copied audit history preview.</p> : null}
+      </section>
 
       {runEvidenceExport ? (
         <div className="run-evidence-preview" aria-labelledby="run-evidence-heading">
