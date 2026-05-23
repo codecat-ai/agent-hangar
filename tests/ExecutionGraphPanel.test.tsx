@@ -1,6 +1,6 @@
 import React from 'react';
-import { render, screen, within } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import { ExecutionGraphPanel } from '../src/ExecutionGraphPanel';
 import { buildDemoExecutionTrail, replayExecutionTrail } from '../src/harness/executionTrail';
 import { createExecutionGraphFromTemplates } from '../src/harness/executionGraph';
@@ -85,5 +85,27 @@ describe('ExecutionGraphPanel', () => {
     expect(screen.getByText('Review completed')).toBeInTheDocument();
     expect(screen.getByText('review-completed · accepted')).toBeInTheDocument();
     expect(document.body.textContent).not.toContain('sk-ui-secret');
+  });
+
+  it('renders local run evidence export preview text and copies through an injected side effect', async () => {
+    const { graph, trail } = buildDemoExecutionTrail();
+    const trailSummary = replayExecutionTrail(graph, trail);
+    const copyRunEvidence = vi.fn();
+
+    render(<ExecutionGraphPanel graph={graph} trailSummary={trailSummary} copyRunEvidence={copyRunEvidence} />);
+
+    expect(screen.getByRole('heading', { name: 'Run evidence export' })).toBeInTheDocument();
+    expect(screen.getByText('agent-hangar.run-evidence-export.v1')).toBeInTheDocument();
+    expect(screen.getByText('workspace-local-demo')).toBeInTheDocument();
+    expect(screen.getByText('- Events: 8')).toBeInTheDocument();
+    expect(screen.getByText('- Graph issues: 0')).toBeInTheDocument();
+    expect(screen.getByText('- 2026-05-23T10:07:00.000Z | review-completed | accepted | demo-reviewer | Review completed | node: demo-reviewer | Reviewer accepts the local demo trail.')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Copy run evidence export' }));
+
+    expect(copyRunEvidence).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Copied run evidence export.'));
+    expect(copyRunEvidence.mock.calls[0]![0]).toContain('schemaVersion: agent-hangar.run-evidence-export.v1');
+    expect(copyRunEvidence.mock.calls[0]![0]).toContain('## Timeline');
   });
 });
