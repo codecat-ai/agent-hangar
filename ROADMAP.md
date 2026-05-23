@@ -22,8 +22,8 @@ Agent Hangar is a young project. It should receive active investment only while 
    - Normalized model capability tags now summarize text, vision, reasoning, embeddings, fast, long-context, and tool-use support for operator decisions.
    - Preserve the secret-safe display/debug contract as Tauri secure storage and real model discovery refresh adapters are added.
 3. **Agent template studio**
-   - Prompt template CRUD helpers are implemented in the frontend harness with deterministic role presets, `{{variableName}}` extraction, immutable updates, version history, and provider/model/escalation validation.
-   - A React template studio foundation is implemented for viewing presets/templates, creating from role presets, editing records, and showing validation/version status.
+   - Prompt template CRUD helpers are implemented in the frontend harness with deterministic role presets, `{{variableName}}` extraction, immutable updates, version history, provider/model/escalation validation, workspace tool requirement checks, escalation policy schema checks, policy variable binding checks, and schema-versioned validation reports.
+   - A React template studio foundation is implemented for viewing presets/templates, creating from role presets, editing records, and showing validation/version status plus missing/disabled tool and unknown policy-variable summaries.
    - Keep template records local-first and ensure provider/model bindings never expose raw provider/API secrets.
 4. **Operator-facing shell hardening**
    - Turn provider and agent panels from static scaffolding into test-backed UI states.
@@ -31,23 +31,23 @@ Agent Hangar is a young project. It should receive active investment only while 
 
 ## Next
 
-1. **Template validation depth**
-   - Validate tool requirements, escalation policy schemas, and policy variable bindings against workspace records.
-   - Add import/export validation reports for template bundles before execution graph work depends on them.
-2. **Execution graph**
+1. **Execution graph**
    - Create tasks, assign agent teams, spawn subagents, and stream events.
    - Support pause, resume, cancel, retry, and durable audit logs.
    - Add inter-agent inbox views for delegation, review, broadcast, and escalation.
-3. **Demo workspace**
+2. **Demo workspace**
    - Include a deterministic local demo showing a small team moving a task from planning to review.
    - Keep demo data free of real secrets, tokens, customer data, or external commands.
+3. **Workspace portability**
+   - Reuse template validation reports in source-checkout workspace import/export flows.
+   - Keep bundle previews free of raw provider API keys and encrypted key material.
 
 ## Later
 
 1. **Observability and replay**
    - Timeline replay, token/cost summaries, structured error taxonomy, and exportable run reports.
-2. **Workspace portability**
-   - Import/export workspace bundles with schema versions and validation reports.
+2. **Execution observability**
+   - Import/export run evidence with schema versions and validation reports.
 3. **Polish and accessibility**
    - Keyboard-first navigation, screen-reader labels for operational states, and a restrained pixel animation pack for queued, working, blocked, failed, and completed states.
 4. **Packaging review**

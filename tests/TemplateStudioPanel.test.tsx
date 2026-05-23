@@ -97,4 +97,50 @@ describe('TemplateStudioPanel', () => {
     expect(within(card).getByText('Template must bind to an escalation policy.')).toBeInTheDocument();
     expect(within(card).getByText('Policy binding references unknown template variable: missing_variable.')).toBeInTheDocument();
   });
+
+  it('renders workspace validation summary for missing tools, disabled tools, and unknown policy variables without secrets', () => {
+    const template = createPromptTemplate({
+      id: 'template-workspace-validation',
+      title: 'Workspace operator',
+      role: 'operator',
+      body: 'Handle {{incident}}.',
+      providerProfileId: 'openai-main',
+      modelId: 'gpt-4.1',
+      escalationPolicyId: 'policy-workspace',
+      requiredToolIds: ['browser', 'shell'],
+      requiredToolNames: ['Missing Console'],
+    }, clock);
+
+    render(
+      <TemplateStudioPanel
+        clock={clock}
+        idSource={() => 'unused'}
+        initialTemplates={[template]}
+        providerOptions={[{ id: 'openai-main', label: 'OpenAI Main', modelIds: ['gpt-4.1'], secretPreview: 'sk-ui-secret' }]}
+        escalationPolicies={[
+          {
+            id: 'policy-workspace',
+            label: 'Workspace escalation',
+            mode: 'queue',
+            queue: 'ops-review',
+            conditions: [{ expression: '{{undeclared_gate}} == true' }],
+          },
+        ]}
+        toolRecords={[
+          { id: 'browser', name: 'Browser', enabled: true },
+          { id: 'shell', name: 'Shell', enabled: false, encryptedKeyMaterial: 'encrypted-secret-material' },
+        ]}
+      />,
+    );
+
+    const card = screen.getByTestId('template-card-template-workspace-validation');
+    expect(within(card).getByText('Validation: blocking')).toBeInTheDocument();
+    expect(within(card).getByText('Tools: 3 required · 1 missing · 1 disabled')).toBeInTheDocument();
+    expect(within(card).getByText('Policy variables: 1 unknown')).toBeInTheDocument();
+    expect(within(card).getByText('Required tool is disabled: Shell.')).toBeInTheDocument();
+    expect(within(card).getByText('Required tool is not available in this workspace: Missing Console.')).toBeInTheDocument();
+    expect(within(card).getByText('Policy binding references unknown template variable: undeclared_gate.')).toBeInTheDocument();
+    expect(document.body.textContent).not.toContain('sk-ui-secret');
+    expect(document.body.textContent).not.toContain('encrypted-secret-material');
+  });
 });
