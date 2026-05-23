@@ -10,7 +10,7 @@ Agent frameworks are useful as libraries, but operators still need a clear deskt
 
 ## Current status
 
-Agent Hangar is in **active-development** foundation work. The Rust core harness currently has passing tests for provider normalization, secret-safe provider cards, encrypted local provider profile helpers, agent templates, status transitions, and inter-agent message routing. The frontend harness also normalizes provider health summaries and model capability tags for operator-facing provider cards. The Tauri/React shell now includes a local provider profile management panel plus agent state panels.
+Agent Hangar is in **active-development** foundation work. The Rust core harness currently has passing tests for provider normalization, secret-safe provider cards, encrypted local provider profile helpers, agent templates, status transitions, and inter-agent message routing. The frontend harness also normalizes provider health summaries and model capability tags for operator-facing provider cards, and now includes a local-first prompt template harness with role presets, variables, version history, and validation. The Tauri/React shell includes local provider profile management, a template studio foundation, and agent state panels.
 
 The app is not packaged for end users yet. Use the source checkout workflow below for development and evaluation.
 
@@ -22,16 +22,18 @@ Implemented foundation pieces:
 - Provider cards that keep secrets out of display/debug output.
 - Pure frontend harness helpers for encrypted local provider profiles with injectable crypto for future Tauri secure storage.
 - Local provider profile create/edit/delete UI flow with secret-safe key status, write-only replacement key handling, and model discovery health summaries for missing-key, degraded, stale, and empty states.
+- Pure prompt template helpers for deterministic role presets, template create/update/delete behavior, `{{variableName}}` extraction, immutable version history, provider/model/escalation validation, and policy binding checks.
+- React template studio foundation for viewing presets/templates, creating from role presets, editing prompt records, and showing validation/version status without exposing provider secrets.
 - Normalized model metadata, conservative capability tags, and provider health summaries for future provider integrations.
 - Agent templates, runtime status transitions, and typed inter-agent message routing.
-- React/Tauri shell scaffold for provider profile management, provider health/capability summaries, and agent state panels.
+- React/Tauri shell scaffold for provider profile management, prompt template management, provider health/capability summaries, and agent state panels.
 - GitHub Actions CI for Rust and frontend verification.
 
 Planned capabilities:
 
 - Manage OpenAI, Anthropic, Gemini, and third-party OpenAI-compatible providers.
 - Fetch and normalize provider model lists.
-- Create and version role-based prompt templates.
+- Deepen template validation for policy/tool bindings and workspace import/export readiness.
 - Launch long-running tasks with cooperating agents and subagents.
 - Route delegation, review, broadcast, and escalation messages between agents.
 - Show queued, working, blocked, failed, and completed states with clear visual affordances.
@@ -81,6 +83,7 @@ A future demo workspace will show a planner, researcher, implementer, and review
 No production provider configuration is required yet. The foundation configuration helpers are local-first and secret-safe:
 
 - Provider profiles can be represented locally with encrypted API keys.
+- Prompt templates are local records and store provider/model identifiers, not raw provider/API secrets.
 - Secrets must not appear in debug strings, exported cards, logs, or UI snapshots.
 - Provider cards expose secret-safe health summaries and capability tag counts derived from local model metadata.
 - The browser demo crypto is intentionally demo-only; production storage should replace it with Tauri-backed secure storage before real provider keys are used.
@@ -116,7 +119,7 @@ See [ROADMAP.md](ROADMAP.md) for the active-development cadence, Now/Next/Later 
 Current focus:
 
 - Keep provider profile editing secret-safe while Tauri secure storage and real model discovery adapters are added.
-- Grow the agent template studio with prompt CRUD, variables, version history, and provider/model validation.
+- Deepen agent template studio validation for policy bindings, tool requirements, and future workspace portability.
 - Add execution graph scaffolding once provider and template foundations are dependable.
 
 ## Contributing

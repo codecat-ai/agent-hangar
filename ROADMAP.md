@@ -4,7 +4,7 @@
 
 - **Maturity:** `active-development`
 - **Planned cadence:** 2-4 focused sessions per week during foundation hardening.
-- **Current phase:** Foundation and provider-management groundwork.
+- **Current phase:** Foundation, provider management, and template studio groundwork.
 - **Category:** Local-first desktop productivity / multi-agent operations UI.
 
 Agent Hangar is a young project. It should receive active investment only while each session advances a product-shaped workflow: reproducible setup, safe provider management, prompt/template governance, task execution, observability, or usable demo evidence. Avoid adding decorative UI or narrow options before the core operator workflow is dependable.
@@ -22,20 +22,23 @@ Agent Hangar is a young project. It should receive active investment only while 
    - Normalized model capability tags now summarize text, vision, reasoning, embeddings, fast, long-context, and tool-use support for operator decisions.
    - Preserve the secret-safe display/debug contract as Tauri secure storage and real model discovery refresh adapters are added.
 3. **Agent template studio**
-   - Build prompt template CRUD with variables and version history as the next active-development item.
-   - Add role presets for planner, researcher, implementer, reviewer, and operator.
-   - Validate missing model, tool, provider, and escalation policies against the provider profile foundation.
+   - Prompt template CRUD helpers are implemented in the frontend harness with deterministic role presets, `{{variableName}}` extraction, immutable updates, version history, and provider/model/escalation validation.
+   - A React template studio foundation is implemented for viewing presets/templates, creating from role presets, editing records, and showing validation/version status.
+   - Keep template records local-first and ensure provider/model bindings never expose raw provider/API secrets.
 4. **Operator-facing shell hardening**
    - Turn provider and agent panels from static scaffolding into test-backed UI states.
    - Add empty, loading, error, and disconnected states before introducing long-running execution.
 
 ## Next
 
-1. **Execution graph**
+1. **Template validation depth**
+   - Validate tool requirements, escalation policy schemas, and policy variable bindings against workspace records.
+   - Add import/export validation reports for template bundles before execution graph work depends on them.
+2. **Execution graph**
    - Create tasks, assign agent teams, spawn subagents, and stream events.
    - Support pause, resume, cancel, retry, and durable audit logs.
    - Add inter-agent inbox views for delegation, review, broadcast, and escalation.
-2. **Demo workspace**
+3. **Demo workspace**
    - Include a deterministic local demo showing a small team moving a task from planning to review.
    - Keep demo data free of real secrets, tokens, customer data, or external commands.
 
