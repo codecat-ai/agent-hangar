@@ -2,6 +2,7 @@ import React from 'react';
 import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { ExecutionGraphPanel } from '../src/ExecutionGraphPanel';
+import { buildDemoExecutionTrail, replayExecutionTrail } from '../src/harness/executionTrail';
 import { createExecutionGraphFromTemplates } from '../src/harness/executionGraph';
 import { createPromptTemplate } from '../src/harness/promptTemplates';
 
@@ -68,5 +69,21 @@ describe('ExecutionGraphPanel', () => {
     render(<ExecutionGraphPanel graph={graph} />);
 
     expect(screen.getByRole('status')).toHaveTextContent('No runnable nodes are ready.');
+  });
+
+  it('renders deterministic local execution trail counts and timeline without secrets', () => {
+    const { graph, trail } = buildDemoExecutionTrail();
+    const trailSummary = replayExecutionTrail(graph, trail);
+
+    render(<ExecutionGraphPanel graph={graph} trailSummary={trailSummary} secretPreview="sk-ui-secret" />);
+
+    expect(screen.getByRole('heading', { name: 'Local execution trail' })).toBeInTheDocument();
+    expect(screen.getByText('8 events')).toBeInTheDocument();
+    expect(screen.getByText('0 trail issues')).toBeInTheDocument();
+    expect(screen.getByText('3 completed')).toBeInTheDocument();
+    expect(screen.getByText('Task created')).toBeInTheDocument();
+    expect(screen.getByText('Review completed')).toBeInTheDocument();
+    expect(screen.getByText('review-completed · accepted')).toBeInTheDocument();
+    expect(document.body.textContent).not.toContain('sk-ui-secret');
   });
 });

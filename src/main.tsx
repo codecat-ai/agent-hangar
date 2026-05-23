@@ -5,6 +5,7 @@ import { ExecutionGraphPanel } from './ExecutionGraphPanel';
 import { ProviderProfilePanel } from './ProviderProfilePanel';
 import { TemplateStudioPanel } from './TemplateStudioPanel';
 import { createAgentRun, transitionRun } from './harness/agentRuntime';
+import { buildDemoExecutionTrail, replayExecutionTrail } from './harness/executionTrail';
 import { createExecutionGraphFromTemplates } from './harness/executionGraph';
 import { type NormalizedModel } from './harness/providerCatalog';
 import { createProfileFromDraft } from './harness/providerProfileFlow';
@@ -98,6 +99,8 @@ const demoExecutionGraph = createExecutionGraphFromTemplates({
 demoExecutionGraph.nodes = demoExecutionGraph.nodes.map((node) => (
   node.id === 'template-planner-demo' ? { ...node, status: 'completed' } : node
 ));
+const demoTrail = buildDemoExecutionTrail();
+const demoTrailSummary = replayExecutionTrail(demoTrail.graph, demoTrail.trail);
 const runs = [
   transitionRun(createAgentRun('task-1', 'planner'), 'working'),
   transitionRun(createAgentRun('task-1', 'researcher'), 'completed'),
@@ -126,7 +129,7 @@ function App() {
           providerOptions={templateProviderOptions}
           escalationPolicies={escalationPolicies}
         />
-        <ExecutionGraphPanel graph={demoExecutionGraph} />
+        <ExecutionGraphPanel graph={demoExecutionGraph} trailSummary={demoTrailSummary} />
         <div className="panel">
           <h2>Agent runway</h2>
           {runs.map((r) => (
