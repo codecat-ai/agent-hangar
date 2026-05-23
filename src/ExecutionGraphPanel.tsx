@@ -27,13 +27,17 @@ import {
   type ExecutionGraph,
   type ExecutionNodeStatus,
 } from './harness/executionGraph';
-import { type ExecutionTrailSummary } from './harness/executionTrail';
+import { replayExecutionTrail, type ExecutionTrailSummary } from './harness/executionTrail';
+import { type DemoWorkspaceScenario } from './harness/demoWorkspace';
 import { formatRunEvidenceExport } from './harness/runEvidenceExport';
 
 export interface ExecutionGraphPanelProps {
-  graph: ExecutionGraph;
+  graph?: ExecutionGraph;
   trailSummary?: ExecutionTrailSummary;
   collaborationItems?: CollaborationInboxRecord[];
+  auditEntries?: ExecutionControlAuditEntry[];
+  demoScenarios?: DemoWorkspaceScenario[];
+  initialDemoScenarioId?: string;
   collaborationActorId?: string;
   collaborationClock?: () => string;
   collaborationStorage?: CollaborationStorage;
@@ -55,6 +59,12 @@ interface CollaborationUiState {
 }
 
 const EMPTY_COLLABORATION_ITEMS: CollaborationInboxRecord[] = [];
+const EMPTY_GRAPH: ExecutionGraph = {
+  schemaVersion: 'agent-hangar.execution-graph.v1',
+  workspaceId: 'workspace-local-empty',
+  nodes: [],
+  edges: [],
+};
 const DEFAULT_TRIAGE_FILTERS: Required<CollaborationTriageFilters> = {
   status: 'all',
   priority: 'all',
@@ -63,22 +73,39 @@ const DEFAULT_TRIAGE_FILTERS: Required<CollaborationTriageFilters> = {
 };
 
 export function ExecutionGraphPanel({
-  graph,
+  graph: graphProp,
   trailSummary,
   collaborationItems = EMPTY_COLLABORATION_ITEMS,
+  auditEntries = [],
+  demoScenarios,
+  initialDemoScenarioId,
   collaborationActorId = 'operator-local-demo',
   collaborationClock = () => '2026-05-23T10:08:00.000Z',
   collaborationStorage,
   copyRunEvidence,
   copyAuditHistory,
 }: ExecutionGraphPanelProps) {
+  const [selectedScenarioId, setSelectedScenarioId] = useState(
+    initialDemoScenarioId ?? demoScenarios?.[0]?.id ?? '',
+  );
   const [copyState, setCopyState] = useState<'idle' | 'copied'>('idle');
   const [auditCopyState, setAuditCopyState] = useState<'idle' | 'copied'>('idle');
+  const selectedScenario = useMemo(
+    () => demoScenarios?.find((scenario) => scenario.id === selectedScenarioId) ?? demoScenarios?.[0],
+    [demoScenarios, selectedScenarioId],
+  );
+  const graph = selectedScenario?.seed.graph ?? graphProp ?? EMPTY_GRAPH;
+  const activeTrailSummary = useMemo(
+    () => selectedScenario ? replayExecutionTrail(selectedScenario.seed.graph, selectedScenario.seed.trail) : trailSummary,
+    [selectedScenario, trailSummary],
+  );
+  const activeCollaborationItems = selectedScenario?.seed.collaborationItems ?? collaborationItems;
+  const activeAuditEntries = selectedScenario?.seed.auditEntries ?? auditEntries;
   const issues = useMemo(() => validateExecutionGraph(graph), [graph]);
   const summary = useMemo(() => buildExecutionGraphSummary(graph), [graph]);
   const initialControlState = useMemo(
-    () => (trailSummary ? createInitialControlState(graph, trailSummary.latestNodeStatuses) : undefined),
-    [graph, trailSummary],
+    () => (activeTrailSummary ? createInitialControlState(graph, activeTrailSummary.latestNodeStatuses) : undefined),
+    [activeTrailSummary, graph],
   );
   const [controlState, setControlState] = useState<ExecutionControlState | undefined>(initialControlState);
   const [controlIssue, setControlIssue] = useState<string | undefined>();
@@ -87,15 +114,15 @@ export function ExecutionGraphPanel({
   const collaborationStorageKey = `agent-hangar:${graph.workspaceId}:collaboration-persistence:v1`;
   const storage = useMemo(() => collaborationStorage ?? getLocalStorage(), [collaborationStorage]);
   const initialCollaborationState = useMemo(
-    () => readInitialCollaborationState(collaborationItems, storage, collaborationStorageKey),
-    [collaborationItems, collaborationStorageKey, storage],
+    () => readInitialCollaborationState(activeCollaborationItems, storage, collaborationStorageKey),
+    [activeCollaborationItems, collaborationStorageKey, storage],
   );
   const [collaborationState, setCollaborationState] = useState<CollaborationUiState>(initialCollaborationState);
   const runEvidenceExport = useMemo(() => (
-    trailSummary
-      ? formatRunEvidenceExport({ trailSummary, graphSummary: summary, graphIssues: issues })
+    activeTrailSummary
+      ? formatRunEvidenceExport({ trailSummary: activeTrailSummary, graphSummary: summary, graphIssues: issues })
       : undefined
-  ), [issues, summary, trailSummary]);
+  ), [activeTrailSummary, issues, summary]);
   const sortedCollaborationItems = useMemo(
     () => sortCollaborationInboxItems(collaborationState.items),
     [collaborationState.items],
@@ -106,10 +133,10 @@ export function ExecutionGraphPanel({
   );
   const auditHistoryPreview = useMemo(() => (
     buildAuditHistoryPreview({
-      auditEntries: [...(controlState?.auditLog ?? []), ...collaborationState.auditEntries],
+      auditEntries: [...activeAuditEntries, ...(controlState?.auditLog ?? []), ...collaborationState.auditEntries],
       collaborationItems: collaborationTriage.rows,
     })
-  ), [collaborationState.auditEntries, collaborationTriage.rows, controlState?.auditLog]);
+  ), [activeAuditEntries, collaborationState.auditEntries, collaborationTriage.rows, controlState?.auditLog]);
   const allowedControlActions = useMemo(
     () => (controlState ? deriveAllowedExecutionControlActions(controlState) : []),
     [controlState],
@@ -136,6 +163,7 @@ export function ExecutionGraphPanel({
 
   useEffect(() => {
     setCollaborationState(initialCollaborationState);
+    setTriageFilters(DEFAULT_TRIAGE_FILTERS);
   }, [initialCollaborationState]);
 
   const handleCopyRunEvidence = () => {
@@ -213,6 +241,23 @@ export function ExecutionGraphPanel({
         <span className="graph-icon" aria-hidden="true"><GitBranch size={20} /></span>
       </div>
 
+      {demoScenarios && demoScenarios.length > 0 ? (
+        <div className="scenario-selector">
+          <label htmlFor="local-demo-scenario">Local demo scenario</label>
+          <select
+            id="local-demo-scenario"
+            aria-label="Local demo scenario"
+            value={selectedScenario?.id ?? selectedScenarioId}
+            onChange={(event) => setSelectedScenarioId(event.target.value)}
+          >
+            {demoScenarios.map((scenario) => (
+              <option key={scenario.id} value={scenario.id}>{scenario.label}</option>
+            ))}
+          </select>
+          {selectedScenario ? <p>{selectedScenario.description}</p> : null}
+        </div>
+      ) : null}
+
       <div className="summary-grid graph-summary" aria-label="Execution graph summary">
         <span>{summary.nodeCount} {summary.nodeCount === 1 ? 'node' : 'nodes'}</span>
         <span>{summary.edgeCount} {summary.edgeCount === 1 ? 'edge' : 'edges'}</span>
@@ -275,21 +320,21 @@ export function ExecutionGraphPanel({
         </ul>
       ) : null}
 
-      {trailSummary ? (
+      {activeTrailSummary ? (
         <div className="trail-preview" aria-labelledby="execution-trail-heading">
           <div className="trail-heading">
             <h3 id="execution-trail-heading">Local execution trail</h3>
             <div className="summary-grid trail-summary" aria-label="Execution trail summary">
-              <span>{trailSummary.eventCount} {trailSummary.eventCount === 1 ? 'event' : 'events'}</span>
-              <span>{trailSummary.issueCount} trail {trailSummary.issueCount === 1 ? 'issue' : 'issues'}</span>
-              <span>{trailSummary.eventStatusCounts.accepted} accepted</span>
-              <span>{trailSummary.latestNodeStatuses
-                ? Object.values(trailSummary.latestNodeStatuses).filter((status) => status === 'completed').length
+              <span>{activeTrailSummary.eventCount} {activeTrailSummary.eventCount === 1 ? 'event' : 'events'}</span>
+              <span>{activeTrailSummary.issueCount} trail {activeTrailSummary.issueCount === 1 ? 'issue' : 'issues'}</span>
+              <span>{activeTrailSummary.eventStatusCounts.accepted} accepted</span>
+              <span>{activeTrailSummary.latestNodeStatuses
+                ? Object.values(activeTrailSummary.latestNodeStatuses).filter((status) => status === 'completed').length
                 : 0} completed</span>
             </div>
           </div>
           <ol className="trail-list" aria-label="Local execution timeline">
-            {trailSummary.timeline.map((entry) => (
+            {activeTrailSummary.timeline.map((entry) => (
               <li key={entry.id}>
                 <time dateTime={entry.occurredAt}>{entry.occurredAt.slice(11, 16)}</time>
                 <div>
@@ -303,7 +348,7 @@ export function ExecutionGraphPanel({
         </div>
       ) : null}
 
-      {trailSummary && controlState ? (
+      {activeTrailSummary && controlState ? (
         <section className="execution-controls" aria-labelledby="execution-controls-heading">
           <div className="trail-heading">
             <div>

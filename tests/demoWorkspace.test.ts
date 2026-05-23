@@ -1,12 +1,41 @@
 import { describe, expect, it } from 'vitest';
 import { buildAuditHistoryPreview, type CollaborationInboxType } from '../src/harness/collaborationAudit';
-import { buildDemoWorkspaceSeed } from '../src/harness/demoWorkspace';
+import {
+  buildDemoWorkspaceSeed,
+  getDemoWorkspaceScenario,
+  listDemoWorkspaceScenarios,
+} from '../src/harness/demoWorkspace';
 import { replayExecutionTrail } from '../src/harness/executionTrail';
 import { buildExecutionGraphSummary, validateExecutionGraph } from '../src/harness/executionGraph';
 
 const SECRET_PATTERN = /apiKey|encryptedKeyMaterial|sk-[A-Za-z0-9._-]{8,}|token\s*=|Bearer\s+[A-Za-z0-9._-]+|customer[A-Za-z0-9_-]*|\bcurl\b|\bnpm\s+(?:run|install|exec|test|start)\b|\bpnpm\b|\byarn\b|\bbash\b|\bsh\s+-c\b/i;
 
 describe('demo workspace seed', () => {
+  it('lists schema-versioned deterministic scenarios and returns clone-safe lookup data', () => {
+    const scenarios = listDemoWorkspaceScenarios();
+
+    expect(scenarios.map((scenario) => scenario.id)).toEqual(['coordination-happy-path', 'blocked-failure-recovery']);
+    expect(scenarios.every((scenario) => scenario.schemaVersion === 'agent-hangar.demo-workspace-scenario.v1')).toBe(true);
+    expect(scenarios[0]).toMatchObject({
+      id: 'coordination-happy-path',
+      label: 'Coordination happy path',
+      seed: { schemaVersion: 'agent-hangar.demo-workspace-seed.v1' },
+    });
+    expect(scenarios[1]).toMatchObject({
+      id: 'blocked-failure-recovery',
+      label: 'Blocked failure recovery',
+      seed: { workspaceId: 'workspace-local-demo-blocked' },
+    });
+
+    scenarios[1]!.label = 'Mutated scenario label';
+    scenarios[1]!.seed.graph.nodes[0]!.title = 'Mutated node';
+
+    const fresh = getDemoWorkspaceScenario('blocked-failure-recovery');
+    expect(fresh.label).toBe('Blocked failure recovery');
+    expect(fresh.seed.graph.nodes[0]!.title).toBe('Recovery planner');
+    expect(getDemoWorkspaceScenario('unknown-scenario').id).toBe('coordination-happy-path');
+  });
+
   it('covers planner, researcher, implementer, and reviewer coordination in graph and replay data', () => {
     const seed = buildDemoWorkspaceSeed();
     const roles = seed.graph.nodes.map((node) => node.role);
@@ -103,5 +132,30 @@ describe('demo workspace seed', () => {
     expect(serialized).not.toMatch(SECRET_PATTERN);
     expect(auditPreview.markdown).not.toMatch(SECRET_PATTERN);
     expect(trailSummary.timeline.map((entry) => entry.note).join('\n')).not.toMatch(SECRET_PATTERN);
+  });
+
+  it('includes blocked failure recovery data with unresolved escalation, high-priority collaboration, sanitized audit preview, and next actions', () => {
+    const scenario = getDemoWorkspaceScenario('blocked-failure-recovery');
+    const seed = scenario.seed;
+    const trailSummary = replayExecutionTrail(seed.graph, seed.trail);
+    const auditPreview = buildAuditHistoryPreview({
+      collaborationItems: seed.collaborationItems,
+      auditEntries: seed.auditEntries,
+    });
+    const serialized = JSON.stringify({ scenario, trailSummary, markdown: auditPreview.markdown });
+
+    expect(scenario.schemaVersion).toBe('agent-hangar.demo-workspace-scenario.v1');
+    expect(seed.graph.nodes.some((node) => node.status === 'blocked' || node.status === 'failed')).toBe(true);
+    expect(Object.values(trailSummary.latestNodeStatuses).some((status) => status === 'blocked' || status === 'failed')).toBe(true);
+    expect(seed.collaborationItems.some((item) => (
+      item.type === 'escalation'
+      && item.status !== 'resolved'
+      && (item.priority === 'urgent' || item.priority === 'high')
+    ))).toBe(true);
+    expect(auditPreview.counts.unresolvedEscalations).toBeGreaterThanOrEqual(1);
+    expect(auditPreview.counts.highPriorityItems + auditPreview.counts.urgentItems).toBeGreaterThanOrEqual(1);
+    expect(auditPreview.nextActionHints).toContain('Resolve 1 urgent escalation before starting more local execution.');
+    expect(auditPreview.markdown).toContain('schemaVersion: agent-hangar.audit-history-preview.v1');
+    expect(serialized).not.toMatch(SECRET_PATTERN);
   });
 });

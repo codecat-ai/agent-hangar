@@ -13,7 +13,9 @@ export type ExecutionTrailEventKind =
   | 'node-started'
   | 'handoff-requested'
   | 'review-completed'
-  | 'node-completed';
+  | 'node-completed'
+  | 'node-blocked'
+  | 'node-failed';
 
 export type ExecutionTrailEventStatus = 'accepted' | 'issue';
 
@@ -155,6 +157,12 @@ function applyEventToNode(node: { status: ExecutionNodeStatus }, kind: Execution
   if (kind === 'node-completed' || kind === 'review-completed') {
     node.status = 'completed';
   }
+  if (kind === 'node-blocked') {
+    node.status = 'blocked';
+  }
+  if (kind === 'node-failed') {
+    node.status = 'failed';
+  }
 }
 
 function sanitizeNote(value: string): string {
@@ -186,5 +194,7 @@ function createEmptyEventKindCounts(): Record<ExecutionTrailEventKind, number> {
     'handoff-requested': 0,
     'review-completed': 0,
     'node-completed': 0,
+    'node-blocked': 0,
+    'node-failed': 0,
   };
 }
