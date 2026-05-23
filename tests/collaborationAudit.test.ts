@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   applyCollaborationInboxMutation,
   buildAuditHistoryPreview,
+  buildCollaborationTriageView,
   normalizeCollaborationInbox,
   sortCollaborationInboxItems,
   type CollaborationInboxRecord,
@@ -188,6 +189,74 @@ describe('collaboration audit harness', () => {
     expect(preview.markdown).toContain('- Unresolved escalations: 1');
     expect(JSON.stringify(preview)).toContain('[redacted]');
     expect(JSON.stringify(preview)).not.toMatch(/apiKey|sk-audit-secret|sk-escalation-secret|customerRecord/);
+  });
+
+  it('filters collaboration triage rows and builds compact sanitized view data', () => {
+    const items = normalizeCollaborationInbox([
+      collaborationRecord({
+        id: 'esc-secret',
+        type: 'escalation',
+        priority: 'urgent',
+        status: 'open',
+        createdAt: '2026-05-23T10:04:00.000Z',
+        title: 'Provider key review',
+        body: 'apiKey=sk-filter-secret must not leak while reviewer checks evidence.',
+        note: 'customerRecord and encryptedKeyMaterial=abc123 stay hidden.',
+      }),
+      collaborationRecord({
+        id: 'delegation-open',
+        type: 'delegation',
+        priority: 'normal',
+        status: 'open',
+        createdAt: '2026-05-23T10:03:00.000Z',
+        title: 'Implementer handoff',
+        body: 'Implementer owns the next local-only handoff.',
+      }),
+      collaborationRecord({
+        id: 'review-ack',
+        type: 'review',
+        priority: 'high',
+        status: 'acknowledged',
+        createdAt: '2026-05-23T10:02:00.000Z',
+        title: 'Review local audit',
+        body: 'Reviewer checks audit history preview.',
+      }),
+      collaborationRecord({
+        id: 'broadcast-done',
+        type: 'broadcast',
+        priority: 'low',
+        status: 'resolved',
+        createdAt: '2026-05-23T10:01:00.000Z',
+        title: 'Broadcast done',
+      }),
+    ]).items;
+
+    const triage = buildCollaborationTriageView(items, {
+      status: 'unresolved',
+      priority: 'high',
+      type: 'escalation',
+      query: 'provider reviewer',
+    });
+
+    expect(triage.schemaVersion).toBe('agent-hangar.collaboration-triage-view.v1');
+    expect(triage.rows.map((row) => row.id)).toEqual(['esc-secret']);
+    expect(triage.rows[0]).toMatchObject({
+      id: 'esc-secret',
+      type: 'escalation',
+      priority: 'urgent',
+      status: 'open',
+      nextActionHint: 'Resolve or acknowledge this urgent escalation before starting more local execution.',
+    });
+    expect(triage.compact).toEqual({
+      visibleCount: 1,
+      hiddenCount: 3,
+      activeFilterLabels: ['Status: unresolved', 'Priority: high/urgent', 'Type: escalation', 'Search: provider reviewer'],
+      highPriorityUnresolvedCount: 1,
+      unresolvedEscalationCount: 1,
+      nextActionHints: ['Resolve or acknowledge this urgent escalation before starting more local execution.'],
+    });
+    expect(JSON.stringify(triage)).toContain('[redacted]');
+    expect(JSON.stringify(triage)).not.toMatch(/apiKey|sk-filter-secret|encryptedKeyMaterial|abc123|customerRecord/);
   });
 
   it('acknowledges an open collaboration item with clone-safe sorted records, sanitized mutation audit, and persistence payload', () => {

@@ -4,6 +4,9 @@ export type CollaborationInboxType = 'delegation' | 'review' | 'broadcast' | 'es
 export type CollaborationInboxPriority = 'low' | 'normal' | 'high' | 'urgent';
 export type CollaborationInboxStatus = 'open' | 'acknowledged' | 'resolved';
 export type CollaborationMutationAction = 'acknowledge' | 'resolve';
+export type CollaborationTriageStatusFilter = 'unresolved' | 'acknowledged' | 'resolved' | 'all';
+export type CollaborationTriagePriorityFilter = 'high' | 'all';
+export type CollaborationTriageTypeFilter = CollaborationInboxType | 'all';
 
 export interface CollaborationInboxRecord {
   schemaVersion: 'agent-hangar.collaboration-inbox-item.v1';
@@ -126,12 +129,40 @@ export interface AuditHistoryPreview {
   markdown: string;
 }
 
+export interface CollaborationTriageFilters {
+  status?: CollaborationTriageStatusFilter;
+  priority?: CollaborationTriagePriorityFilter;
+  type?: CollaborationTriageTypeFilter;
+  query?: string;
+}
+
+export interface CollaborationTriageRow extends CollaborationInboxRecord {
+  nextActionHint: string;
+}
+
+export interface CollaborationTriageCompactView {
+  visibleCount: number;
+  hiddenCount: number;
+  activeFilterLabels: string[];
+  highPriorityUnresolvedCount: number;
+  unresolvedEscalationCount: number;
+  nextActionHints: string[];
+}
+
+export interface CollaborationTriageView {
+  schemaVersion: 'agent-hangar.collaboration-triage-view.v1';
+  filters: Required<CollaborationTriageFilters>;
+  rows: CollaborationTriageRow[];
+  compact: CollaborationTriageCompactView;
+}
+
 const COLLABORATION_SCHEMA_VERSION = 'agent-hangar.collaboration-inbox-item.v1';
 const NORMALIZATION_SCHEMA_VERSION = 'agent-hangar.collaboration-inbox-normalization.v1';
 const AUDIT_HISTORY_SCHEMA_VERSION = 'agent-hangar.audit-history-preview.v1';
 const COLLABORATION_MUTATION_AUDIT_SCHEMA_VERSION = 'agent-hangar.collaboration-mutation-audit.v1';
 const COLLABORATION_PERSISTENCE_SCHEMA_VERSION = 'agent-hangar.collaboration-persistence.v1';
 const COLLABORATION_MUTATION_RESULT_SCHEMA_VERSION = 'agent-hangar.collaboration-mutation-result.v1';
+const COLLABORATION_TRIAGE_SCHEMA_VERSION = 'agent-hangar.collaboration-triage-view.v1';
 const COLLABORATION_TYPES: CollaborationInboxType[] = ['delegation', 'review', 'broadcast', 'escalation'];
 const PRIORITIES: CollaborationInboxPriority[] = ['low', 'normal', 'high', 'urgent'];
 const STATUSES: CollaborationInboxStatus[] = ['open', 'acknowledged', 'resolved'];
@@ -305,6 +336,41 @@ export function buildAuditHistoryPreview(input: AuditHistoryPreviewInput): Audit
   };
 }
 
+export function buildCollaborationTriageView(
+  items: CollaborationInboxRecord[],
+  filters: CollaborationTriageFilters = {},
+): CollaborationTriageView {
+  const normalizedFilters: Required<CollaborationTriageFilters> = {
+    status: filters.status ?? 'unresolved',
+    priority: filters.priority ?? 'all',
+    type: filters.type ?? 'all',
+    query: safeText(filters.query ?? '', TEXT_LIMIT),
+  };
+  const allRows = sortCollaborationInboxItems(items.map(cloneCollaborationItem)).map(toTriageRow);
+  const queryTerms = normalizedFilters.query.toLocaleLowerCase().split(/\s+/).filter(Boolean);
+  const rows = allRows.filter((row) => (
+    matchesStatusFilter(row, normalizedFilters.status)
+    && matchesPriorityFilter(row, normalizedFilters.priority)
+    && matchesTypeFilter(row, normalizedFilters.type)
+    && matchesQueryFilter(row, queryTerms)
+  ));
+  const nextActionHints = unique(rows.map((row) => row.nextActionHint)).slice(0, 3);
+
+  return {
+    schemaVersion: COLLABORATION_TRIAGE_SCHEMA_VERSION,
+    filters: normalizedFilters,
+    rows,
+    compact: {
+      visibleCount: rows.length,
+      hiddenCount: Math.max(0, allRows.length - rows.length),
+      activeFilterLabels: buildActiveFilterLabels(normalizedFilters),
+      highPriorityUnresolvedCount: rows.filter((row) => isHighPriority(row) && row.status !== 'resolved').length,
+      unresolvedEscalationCount: rows.filter((row) => row.type === 'escalation' && row.status !== 'resolved').length,
+      nextActionHints: nextActionHints.length > 0 ? nextActionHints : ['No collaboration item matches the active triage filters.'],
+    },
+  };
+}
+
 function validateRecord(source: Record<string, unknown>, itemId: string): CollaborationInboxIssue[] {
   const issues: CollaborationInboxIssue[] = [];
   if (source.schemaVersion !== COLLABORATION_SCHEMA_VERSION) {
@@ -400,6 +466,79 @@ function buildNextActionHints(counts: AuditHistoryPreview['counts'], auditEntryC
     hints.push('No unresolved collaboration or guarded control follow-up is pending.');
   }
   return hints;
+}
+
+function toTriageRow(item: CollaborationInboxRecord): CollaborationTriageRow {
+  return {
+    ...cloneCollaborationItem(item),
+    nextActionHint: nextActionHintForCollaborationItem(item),
+  };
+}
+
+function nextActionHintForCollaborationItem(item: CollaborationInboxRecord): string {
+  if (item.status === 'resolved') {
+    return `No follow-up is pending for resolved ${item.type} item ${item.id}.`;
+  }
+  if (item.type === 'escalation' && item.priority === 'urgent') {
+    return 'Resolve or acknowledge this urgent escalation before starting more local execution.';
+  }
+  if (item.type === 'review') {
+    return `Complete the local review follow-up for ${item.assignedAgentId ?? item.id}.`;
+  }
+  if (item.type === 'delegation') {
+    return `Confirm the delegated next action with ${item.assignedAgentId ?? item.id}.`;
+  }
+  if (item.type === 'broadcast') {
+    return 'Confirm the broadcast reached the local workspace participants.';
+  }
+  return `Review ${item.type} item ${item.id}.`;
+}
+
+function matchesStatusFilter(row: CollaborationTriageRow, filter: CollaborationTriageStatusFilter): boolean {
+  if (filter === 'all') {
+    return true;
+  }
+  if (filter === 'unresolved') {
+    return row.status !== 'resolved';
+  }
+  return row.status === filter;
+}
+
+function matchesPriorityFilter(row: CollaborationTriageRow, filter: CollaborationTriagePriorityFilter): boolean {
+  return filter === 'all' || isHighPriority(row);
+}
+
+function matchesTypeFilter(row: CollaborationTriageRow, filter: CollaborationTriageTypeFilter): boolean {
+  return filter === 'all' || row.type === filter;
+}
+
+function matchesQueryFilter(row: CollaborationTriageRow, queryTerms: string[]): boolean {
+  if (queryTerms.length === 0) {
+    return true;
+  }
+  const haystack = [
+    row.title,
+    row.body,
+    row.nextActionHint,
+  ].filter(Boolean).join(' ').toLocaleLowerCase();
+  return queryTerms.every((term) => haystack.includes(term));
+}
+
+function buildActiveFilterLabels(filters: Required<CollaborationTriageFilters>): string[] {
+  return [
+    filters.status === 'all' ? undefined : `Status: ${filters.status}`,
+    filters.priority === 'all' ? undefined : 'Priority: high/urgent',
+    filters.type === 'all' ? undefined : `Type: ${filters.type}`,
+    filters.query ? `Search: ${filters.query}` : undefined,
+  ].filter((label): label is string => Boolean(label));
+}
+
+function isHighPriority(item: Pick<CollaborationInboxRecord, 'priority'>): boolean {
+  return item.priority === 'high' || item.priority === 'urgent';
+}
+
+function unique(values: string[]): string[] {
+  return [...new Set(values)];
 }
 
 function renderMarkdown(preview: Omit<AuditHistoryPreview, 'markdown'>): string {

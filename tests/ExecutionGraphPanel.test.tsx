@@ -229,6 +229,71 @@ describe('ExecutionGraphPanel', () => {
     expect(copyAuditHistory.mock.calls[0]![0]).not.toMatch(/apiKey|sk-ui-secret|encryptedKeyMaterial|abc123/);
   });
 
+  it('filters collaboration triage with accessible controls and renders compact sanitized audit preview', () => {
+    const { graph, trail } = buildDemoExecutionTrail();
+    const trailSummary = replayExecutionTrail(graph, trail);
+    const collaborationItems = normalizeCollaborationInbox([
+      {
+        schemaVersion: 'agent-hangar.collaboration-inbox-item.v1',
+        id: 'esc-filter',
+        type: 'escalation',
+        priority: 'urgent',
+        status: 'open',
+        assignedAgentId: 'demo-reviewer',
+        createdAt: '2026-05-23T10:09:00.000Z',
+        title: 'Provider evidence blocked',
+        body: 'apiKey=sk-filter-ui-secret must never render in compact triage.',
+        note: 'encryptedKeyMaterial=abc123 stays hidden.',
+      },
+      {
+        schemaVersion: 'agent-hangar.collaboration-inbox-item.v1',
+        id: 'review-filter',
+        type: 'review',
+        priority: 'high',
+        status: 'acknowledged',
+        assignedAgentId: 'demo-reviewer',
+        createdAt: '2026-05-23T10:08:00.000Z',
+        title: 'Review local audit',
+        body: 'Reviewer checks audit history.',
+      },
+      {
+        schemaVersion: 'agent-hangar.collaboration-inbox-item.v1',
+        id: 'delegation-filter',
+        type: 'delegation',
+        priority: 'normal',
+        status: 'open',
+        assignedAgentId: 'demo-implementer',
+        createdAt: '2026-05-23T10:07:00.000Z',
+        title: 'Implementer handoff',
+      },
+    ]).items;
+
+    render(<ExecutionGraphPanel graph={graph} trailSummary={trailSummary} collaborationItems={collaborationItems} />);
+
+    const inbox = screen.getByRole('region', { name: 'Collaboration inbox' });
+    fireEvent.change(within(inbox).getByLabelText('Collaboration status filter'), { target: { value: 'unresolved' } });
+    fireEvent.change(within(inbox).getByLabelText('Collaboration priority filter'), { target: { value: 'high' } });
+    fireEvent.change(within(inbox).getByLabelText('Collaboration type filter'), { target: { value: 'escalation' } });
+    fireEvent.change(within(inbox).getByLabelText('Search collaboration text'), { target: { value: 'provider render' } });
+
+    expect(within(inbox).getByText('1 visible')).toBeInTheDocument();
+    expect(within(inbox).getByText('2 hidden')).toBeInTheDocument();
+    expect(within(inbox).getByText('1 high-priority unresolved')).toBeInTheDocument();
+    expect(within(inbox).getByText('1 unresolved escalation')).toBeInTheDocument();
+    expect(within(inbox).getByText('Status: unresolved')).toBeInTheDocument();
+    expect(within(inbox).getByText('Priority: high/urgent')).toBeInTheDocument();
+    expect(within(inbox).getByText('Type: escalation')).toBeInTheDocument();
+    expect(within(inbox).getByText('Search: provider render')).toBeInTheDocument();
+    expect(within(inbox).getByText('Provider evidence blocked')).toBeInTheDocument();
+    expect(within(inbox).queryByText('Review local audit')).not.toBeInTheDocument();
+    expect(within(inbox).getByText('Resolve or acknowledge this urgent escalation before starting more local execution.')).toBeInTheDocument();
+
+    const history = screen.getByRole('region', { name: 'Audit history preview' });
+    expect(within(history).getByText('- Collaboration items: 1')).toBeInTheDocument();
+    expect(within(history).getByText('- Unresolved escalations: 1')).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/apiKey|sk-filter-ui-secret|encryptedKeyMaterial|abc123/);
+  });
+
   it('shows relevant collaboration actions, persists acknowledgements, and refreshes the audit preview', async () => {
     const { graph, trail } = buildDemoExecutionTrail();
     const trailSummary = replayExecutionTrail(graph, trail);

@@ -11,7 +11,12 @@ import {
 import {
   applyCollaborationInboxMutation,
   buildAuditHistoryPreview,
+  buildCollaborationTriageView,
   sortCollaborationInboxItems,
+  type CollaborationTriageFilters,
+  type CollaborationTriagePriorityFilter,
+  type CollaborationTriageStatusFilter,
+  type CollaborationTriageTypeFilter,
   type CollaborationMutationAction,
   type CollaborationMutationAuditEntry,
   type CollaborationInboxRecord,
@@ -50,6 +55,12 @@ interface CollaborationUiState {
 }
 
 const EMPTY_COLLABORATION_ITEMS: CollaborationInboxRecord[] = [];
+const DEFAULT_TRIAGE_FILTERS: Required<CollaborationTriageFilters> = {
+  status: 'all',
+  priority: 'all',
+  type: 'all',
+  query: '',
+};
 
 export function ExecutionGraphPanel({
   graph,
@@ -72,6 +83,7 @@ export function ExecutionGraphPanel({
   const [controlState, setControlState] = useState<ExecutionControlState | undefined>(initialControlState);
   const [controlIssue, setControlIssue] = useState<string | undefined>();
   const [latestAuditEntry, setLatestAuditEntry] = useState<ExecutionControlAuditEntry | undefined>();
+  const [triageFilters, setTriageFilters] = useState<Required<CollaborationTriageFilters>>(DEFAULT_TRIAGE_FILTERS);
   const collaborationStorageKey = `agent-hangar:${graph.workspaceId}:collaboration-persistence:v1`;
   const storage = useMemo(() => collaborationStorage ?? getLocalStorage(), [collaborationStorage]);
   const initialCollaborationState = useMemo(
@@ -88,12 +100,16 @@ export function ExecutionGraphPanel({
     () => sortCollaborationInboxItems(collaborationState.items),
     [collaborationState.items],
   );
+  const collaborationTriage = useMemo(
+    () => buildCollaborationTriageView(sortedCollaborationItems, triageFilters),
+    [sortedCollaborationItems, triageFilters],
+  );
   const auditHistoryPreview = useMemo(() => (
     buildAuditHistoryPreview({
       auditEntries: [...(controlState?.auditLog ?? []), ...collaborationState.auditEntries],
-      collaborationItems: sortedCollaborationItems,
+      collaborationItems: collaborationTriage.rows,
     })
-  ), [collaborationState.auditEntries, controlState?.auditLog, sortedCollaborationItems]);
+  ), [collaborationState.auditEntries, collaborationTriage.rows, controlState?.auditLog]);
   const allowedControlActions = useMemo(
     () => (controlState ? deriveAllowedExecutionControlActions(controlState) : []),
     [controlState],
@@ -179,6 +195,12 @@ export function ExecutionGraphPanel({
       statusMessage: `${formatActionPastTense(action)} ${itemId}.${persistenceAvailable ? '' : ' Local persistence is unavailable.'}`,
       issueMessage: undefined,
     });
+  };
+  const handleTriageFilterChange = <Key extends keyof CollaborationTriageFilters>(
+    key: Key,
+    value: Required<CollaborationTriageFilters>[Key],
+  ) => {
+    setTriageFilters((current) => ({ ...current, [key]: value }));
   };
 
   return (
@@ -321,15 +343,75 @@ export function ExecutionGraphPanel({
           <div>
             <h3 id="collaboration-inbox-heading">Collaboration inbox</h3>
             <div className="summary-grid trail-summary" aria-label="Collaboration inbox summary">
-              <span>{sortedCollaborationItems.length} {sortedCollaborationItems.length === 1 ? 'item' : 'items'}</span>
+              <span>{collaborationTriage.compact.visibleCount} visible</span>
+              <span>{collaborationTriage.compact.hiddenCount} hidden</span>
+              <span>{collaborationTriage.compact.highPriorityUnresolvedCount} high-priority unresolved</span>
+              <span>{collaborationTriage.compact.unresolvedEscalationCount} unresolved {collaborationTriage.compact.unresolvedEscalationCount === 1 ? 'escalation' : 'escalations'}</span>
               <span>{unresolvedCollaborationCount} unresolved</span>
               <span>{urgentCollaborationCount} urgent</span>
             </div>
           </div>
         </div>
-        {sortedCollaborationItems.length > 0 ? (
+        <div className="triage-filter-grid" aria-label="Collaboration triage filters">
+          <label>
+            Status
+            <select
+              aria-label="Collaboration status filter"
+              value={triageFilters.status}
+              onChange={(event) => handleTriageFilterChange('status', event.target.value as CollaborationTriageStatusFilter)}
+            >
+              <option value="unresolved">Unresolved</option>
+              <option value="acknowledged">Acknowledged</option>
+              <option value="resolved">Resolved</option>
+              <option value="all">All</option>
+            </select>
+          </label>
+          <label>
+            Priority
+            <select
+              aria-label="Collaboration priority filter"
+              value={triageFilters.priority}
+              onChange={(event) => handleTriageFilterChange('priority', event.target.value as CollaborationTriagePriorityFilter)}
+            >
+              <option value="all">All</option>
+              <option value="high">High and urgent</option>
+            </select>
+          </label>
+          <label>
+            Type
+            <select
+              aria-label="Collaboration type filter"
+              value={triageFilters.type}
+              onChange={(event) => handleTriageFilterChange('type', event.target.value as CollaborationTriageTypeFilter)}
+            >
+              <option value="all">All</option>
+              <option value="delegation">Delegation</option>
+              <option value="review">Review</option>
+              <option value="broadcast">Broadcast</option>
+              <option value="escalation">Escalation</option>
+            </select>
+          </label>
+          <label>
+            Search
+            <input
+              aria-label="Search collaboration text"
+              type="search"
+              value={triageFilters.query}
+              onChange={(event) => handleTriageFilterChange('query', event.target.value)}
+            />
+          </label>
+        </div>
+        {collaborationTriage.compact.activeFilterLabels.length > 0 ? (
+          <ul className="tag-row active-filter-list" aria-label="Active collaboration filters">
+            {collaborationTriage.compact.activeFilterLabels.map((label) => <li className="tag" key={label}>{label}</li>)}
+          </ul>
+        ) : null}
+        <ul className="issue-list" aria-label="Filtered collaboration next actions">
+          {collaborationTriage.compact.nextActionHints.map((hint) => <li key={hint}>{hint}</li>)}
+        </ul>
+        {collaborationTriage.rows.length > 0 ? (
           <ol className="trail-list" aria-label="Collaboration inbox items">
-            {sortedCollaborationItems.slice(0, 4).map((item) => (
+            {collaborationTriage.rows.slice(0, 4).map((item) => (
               <li key={item.id}>
                 <time dateTime={item.createdAt}>{item.createdAt.slice(11, 16)}</time>
                 <div>
