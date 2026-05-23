@@ -9,8 +9,11 @@ import {
   type ExecutionControlStatus,
 } from './harness/executionControls';
 import {
+  applyCollaborationInboxMutation,
   buildAuditHistoryPreview,
   sortCollaborationInboxItems,
+  type CollaborationMutationAction,
+  type CollaborationMutationAuditEntry,
   type CollaborationInboxRecord,
 } from './harness/collaborationAudit';
 import {
@@ -26,15 +29,35 @@ export interface ExecutionGraphPanelProps {
   graph: ExecutionGraph;
   trailSummary?: ExecutionTrailSummary;
   collaborationItems?: CollaborationInboxRecord[];
+  collaborationActorId?: string;
+  collaborationClock?: () => string;
+  collaborationStorage?: CollaborationStorage;
   secretPreview?: string;
   copyRunEvidence?: (markdown: string) => void | Promise<void>;
   copyAuditHistory?: (markdown: string) => void | Promise<void>;
 }
 
+interface CollaborationStorage {
+  getItem: (key: string) => string | null;
+  setItem: (key: string, value: string) => void;
+}
+
+interface CollaborationUiState {
+  items: CollaborationInboxRecord[];
+  auditEntries: CollaborationMutationAuditEntry[];
+  statusMessage?: string;
+  issueMessage?: string;
+}
+
+const EMPTY_COLLABORATION_ITEMS: CollaborationInboxRecord[] = [];
+
 export function ExecutionGraphPanel({
   graph,
   trailSummary,
-  collaborationItems = [],
+  collaborationItems = EMPTY_COLLABORATION_ITEMS,
+  collaborationActorId = 'operator-local-demo',
+  collaborationClock = () => '2026-05-23T10:08:00.000Z',
+  collaborationStorage,
   copyRunEvidence,
   copyAuditHistory,
 }: ExecutionGraphPanelProps) {
@@ -49,21 +72,28 @@ export function ExecutionGraphPanel({
   const [controlState, setControlState] = useState<ExecutionControlState | undefined>(initialControlState);
   const [controlIssue, setControlIssue] = useState<string | undefined>();
   const [latestAuditEntry, setLatestAuditEntry] = useState<ExecutionControlAuditEntry | undefined>();
+  const collaborationStorageKey = `agent-hangar:${graph.workspaceId}:collaboration-persistence:v1`;
+  const storage = useMemo(() => collaborationStorage ?? getLocalStorage(), [collaborationStorage]);
+  const initialCollaborationState = useMemo(
+    () => readInitialCollaborationState(collaborationItems, storage, collaborationStorageKey),
+    [collaborationItems, collaborationStorageKey, storage],
+  );
+  const [collaborationState, setCollaborationState] = useState<CollaborationUiState>(initialCollaborationState);
   const runEvidenceExport = useMemo(() => (
     trailSummary
       ? formatRunEvidenceExport({ trailSummary, graphSummary: summary, graphIssues: issues })
       : undefined
   ), [issues, summary, trailSummary]);
   const sortedCollaborationItems = useMemo(
-    () => sortCollaborationInboxItems(collaborationItems),
-    [collaborationItems],
+    () => sortCollaborationInboxItems(collaborationState.items),
+    [collaborationState.items],
   );
   const auditHistoryPreview = useMemo(() => (
     buildAuditHistoryPreview({
-      auditEntries: controlState?.auditLog ?? [],
+      auditEntries: [...(controlState?.auditLog ?? []), ...collaborationState.auditEntries],
       collaborationItems: sortedCollaborationItems,
     })
-  ), [controlState?.auditLog, sortedCollaborationItems]);
+  ), [collaborationState.auditEntries, controlState?.auditLog, sortedCollaborationItems]);
   const allowedControlActions = useMemo(
     () => (controlState ? deriveAllowedExecutionControlActions(controlState) : []),
     [controlState],
@@ -77,6 +107,10 @@ export function ExecutionGraphPanel({
     setControlIssue(undefined);
     setLatestAuditEntry(undefined);
   }, [initialControlState]);
+
+  useEffect(() => {
+    setCollaborationState(initialCollaborationState);
+  }, [initialCollaborationState]);
 
   const handleCopyRunEvidence = () => {
     if (!runEvidenceExport) {
@@ -106,6 +140,35 @@ export function ExecutionGraphPanel({
       setLatestAuditEntry(undefined);
       setControlIssue(result.issue.message);
     }
+  };
+  const handleCollaborationAction = (itemId: string, action: CollaborationMutationAction) => {
+    const result = applyCollaborationInboxMutation(collaborationState.items, {
+      action,
+      itemId,
+      actorId: collaborationActorId,
+      clock: collaborationClock,
+      reason: action === 'resolve' ? 'Resolved from local collaboration inbox.' : undefined,
+      note: action === 'acknowledge' ? 'Acknowledged from local collaboration inbox.' : undefined,
+      existingAuditEntries: collaborationState.auditEntries,
+      auditHistoryEntries: controlState?.auditLog ?? [],
+    });
+
+    if (!result.ok) {
+      setCollaborationState((current) => ({
+        ...current,
+        issueMessage: result.issue?.message ?? 'Collaboration mutation failed.',
+        statusMessage: undefined,
+      }));
+      return;
+    }
+
+    const persistenceAvailable = persistCollaborationState(storage, collaborationStorageKey, result.persistencePayload);
+    setCollaborationState({
+      items: result.items,
+      auditEntries: result.auditEntries,
+      statusMessage: `${formatActionPastTense(action)} ${itemId}.${persistenceAvailable ? '' : ' Local persistence is unavailable.'}`,
+      issueMessage: undefined,
+    });
   };
 
   return (
@@ -243,6 +306,26 @@ export function ExecutionGraphPanel({
                   <small>{item.type} · {item.priority} · {item.status}{item.assignedAgentId ? ` · ${item.assignedAgentId}` : ''}</small>
                   {item.body ? <p>{item.body}</p> : null}
                   {item.note ? <p>{item.note}</p> : null}
+                  {item.status !== 'resolved' ? (
+                    <div className="tag-row" aria-label={`Collaboration actions for ${item.id}`}>
+                      {item.status === 'open' ? (
+                        <button
+                          type="button"
+                          onClick={() => handleCollaborationAction(item.id, 'acknowledge')}
+                          aria-label={`Acknowledge collaboration item ${item.id}`}
+                        >
+                          Acknowledge
+                        </button>
+                      ) : null}
+                      <button
+                        type="button"
+                        onClick={() => handleCollaborationAction(item.id, 'resolve')}
+                        aria-label={`Resolve collaboration item ${item.id}`}
+                      >
+                        Resolve
+                      </button>
+                    </div>
+                  ) : null}
                 </div>
               </li>
             ))}
@@ -250,6 +333,8 @@ export function ExecutionGraphPanel({
         ) : (
           <p className="empty-state">No collaboration inbox items are pending.</p>
         )}
+        {collaborationState.statusMessage ? <p className="copy-status" role="status">{collaborationState.statusMessage}</p> : null}
+        {collaborationState.issueMessage ? <p className="form-error" role="alert">{collaborationState.issueMessage}</p> : null}
       </section>
 
       <section className="audit-history-preview" aria-labelledby="audit-history-heading">
@@ -334,4 +419,79 @@ function toControlStatus(status: ExecutionNodeStatus): ExecutionControlStatus {
 
 function formatActionLabel(action: ExecutionControlAction): string {
   return action.slice(0, 1).toUpperCase() + action.slice(1);
+}
+
+function formatActionPastTense(action: CollaborationMutationAction): string {
+  return action === 'acknowledge' ? 'Acknowledged' : 'Resolved';
+}
+
+function readInitialCollaborationState(
+  collaborationItems: CollaborationInboxRecord[],
+  storage: CollaborationStorage | undefined,
+  storageKey: string,
+): CollaborationUiState {
+  const persisted = readPersistedCollaborationState(storage, storageKey);
+  return persisted ?? {
+    items: sortCollaborationInboxItems(collaborationItems),
+    auditEntries: [],
+  };
+}
+
+function readPersistedCollaborationState(
+  storage: CollaborationStorage | undefined,
+  storageKey: string,
+): CollaborationUiState | undefined {
+  if (!storage) {
+    return undefined;
+  }
+
+  try {
+    const rawPayload = storage.getItem(storageKey);
+    if (!rawPayload) {
+      return undefined;
+    }
+    const payload = JSON.parse(rawPayload) as {
+      schemaVersion?: string;
+      collaborationItems?: CollaborationInboxRecord[];
+      mutationAuditEntries?: CollaborationMutationAuditEntry[];
+    };
+    if (
+      payload.schemaVersion !== 'agent-hangar.collaboration-persistence.v1'
+      || !Array.isArray(payload.collaborationItems)
+      || !Array.isArray(payload.mutationAuditEntries)
+    ) {
+      return undefined;
+    }
+    return {
+      items: sortCollaborationInboxItems(payload.collaborationItems),
+      auditEntries: payload.mutationAuditEntries,
+    };
+  } catch {
+    return undefined;
+  }
+}
+
+function persistCollaborationState(
+  storage: CollaborationStorage | undefined,
+  storageKey: string,
+  payload: unknown,
+): boolean {
+  if (!storage) {
+    return false;
+  }
+
+  try {
+    storage.setItem(storageKey, JSON.stringify(payload));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function getLocalStorage(): CollaborationStorage | undefined {
+  try {
+    return typeof window === 'undefined' ? undefined : window.localStorage;
+  } catch {
+    return undefined;
+  }
 }

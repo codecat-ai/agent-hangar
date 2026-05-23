@@ -4,7 +4,7 @@
 
 - **Maturity:** `active-development`
 - **Planned cadence:** 2-4 focused sessions per week during foundation hardening.
-- **Current phase:** Foundation, provider management, template studio, execution graph, local evidence export, guarded local execution controls, collaboration inbox, and audit-history preview groundwork.
+- **Current phase:** Foundation, provider management, template studio, execution graph, local evidence export, guarded local execution controls, collaboration inbox persistence, and audit-history preview groundwork.
 - **Category:** Local-first desktop productivity / multi-agent operations UI.
 
 Agent Hangar is a young project. It should receive active investment only while each session advances a product-shaped workflow: reproducible setup, safe provider management, prompt/template governance, task execution, observability, or usable demo evidence. Avoid adding decorative UI or narrow options before the core operator workflow is dependable.
@@ -36,19 +36,20 @@ Agent Hangar is a young project. It should receive active investment only while 
    - The local demo UI now exposes allowed control buttons only for the selected run/node state and previews sanitized status/audit results without real provider execution or external commands.
    - Pure collaboration inbox helpers now normalize schema-versioned delegation, review, broadcast, and escalation items; trim text; reject invalid type, status, priority, timestamp, schema, id, and title fields with typed issues; sort unresolved high-priority recent records first; and redact secret-looking body/note content.
    - Pure audit-history preview helpers now combine guarded execution-control audit entries with collaboration items into deterministic counts, recent sanitized entries, unresolved escalation counts, next-action hints, and secret-safe Markdown preview data.
-   - The local demo UI now shows collaboration inbox counts, unresolved items, recent sanitized audit history, next-action hints, and copyable Markdown preview data inside the execution graph panel.
+   - Pure collaboration mutation helpers now acknowledge and resolve inbox items by id, reject unknown ids and invalid resolved-item transitions with typed issues, keep clone-safe sorted records, append schema-versioned sanitized mutation audit entries with injected clock/actor values, and return schema-versioned local persistence payloads with sanitized audit-history previews.
+   - The local demo UI now shows collaboration inbox counts, unresolved items, relevant acknowledge/resolve controls, localStorage persistence with safe fallback, mutation status text, recent sanitized audit history, next-action hints, and copyable Markdown preview data inside the execution graph panel.
 5. **Operator-facing shell hardening**
    - Turn provider and agent panels from static scaffolding into test-backed UI states.
    - Add empty, loading, error, and disconnected states before introducing long-running execution.
 
 ## Next
 
-1. **Collaboration workflow persistence**
-   - Add local persistence and mutation flows for acknowledging and resolving collaboration inbox items.
-   - Keep persisted collaboration and audit-history previews schema-versioned, deterministic, and secret-safe.
-2. **Demo workspace expansion**
+1. **Demo workspace expansion**
    - Extend the deterministic local demo from replay evidence into a fuller workspace showing planner, researcher, implementer, and reviewer coordination.
-   - Keep demo data free of real secrets, tokens, customer data, or external commands.
+   - Add richer seeded collaboration items for delegation, review, broadcast, and escalation without real secrets, tokens, customer data, network calls, or shell commands.
+2. **Collaboration triage ergonomics**
+   - Add operator filters or compact views for collaboration and audit history once the seeded demo has enough items to justify them.
+   - Keep collaboration mutation state deterministic, schema-versioned, and provider-free.
 3. **Workspace portability**
    - Reuse template validation reports in source-checkout workspace import/export flows.
    - Keep bundle previews free of raw provider API keys and encrypted key material.

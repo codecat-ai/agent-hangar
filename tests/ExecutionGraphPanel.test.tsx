@@ -210,4 +210,120 @@ describe('ExecutionGraphPanel', () => {
     expect(document.body.textContent).not.toMatch(/apiKey|sk-ui-secret|encryptedKeyMaterial|abc123/);
     expect(copyAuditHistory.mock.calls[0]![0]).not.toMatch(/apiKey|sk-ui-secret|encryptedKeyMaterial|abc123/);
   });
+
+  it('shows relevant collaboration actions, persists acknowledgements, and refreshes the audit preview', async () => {
+    const { graph, trail } = buildDemoExecutionTrail();
+    const trailSummary = replayExecutionTrail(graph, trail);
+    const copyAuditHistory = vi.fn();
+    const storage = {
+      getItem: vi.fn(() => null),
+      setItem: vi.fn(),
+    };
+    const collaborationItems = normalizeCollaborationInbox([
+      {
+        schemaVersion: 'agent-hangar.collaboration-inbox-item.v1',
+        id: 'esc-action',
+        type: 'escalation',
+        priority: 'urgent',
+        status: 'open',
+        assignedAgentId: 'demo-reviewer',
+        createdAt: '2026-05-23T10:09:00.000Z',
+        title: 'Provider handoff blocked',
+      },
+      {
+        schemaVersion: 'agent-hangar.collaboration-inbox-item.v1',
+        id: 'done-action',
+        type: 'review',
+        priority: 'high',
+        status: 'resolved',
+        assignedAgentId: 'demo-reviewer',
+        createdAt: '2026-05-23T10:08:00.000Z',
+        title: 'Resolved review',
+      },
+    ]).items;
+
+    render(
+      <ExecutionGraphPanel
+        graph={graph}
+        trailSummary={trailSummary}
+        collaborationItems={collaborationItems}
+        collaborationStorage={storage}
+        collaborationClock={() => '2026-05-23T10:11:00.000Z'}
+        collaborationActorId="operator:test"
+        copyAuditHistory={copyAuditHistory}
+      />,
+    );
+
+    const inbox = screen.getByRole('region', { name: 'Collaboration inbox' });
+    expect(within(inbox).getByRole('button', { name: 'Acknowledge collaboration item esc-action' })).toBeInTheDocument();
+    expect(within(inbox).getByRole('button', { name: 'Resolve collaboration item esc-action' })).toBeInTheDocument();
+    expect(within(inbox).queryByRole('button', { name: /done-action/ })).not.toBeInTheDocument();
+
+    fireEvent.click(within(inbox).getByRole('button', { name: 'Acknowledge collaboration item esc-action' }));
+
+    await waitFor(() => expect(within(inbox).getByRole('status')).toHaveTextContent('Acknowledged esc-action.'));
+    expect(within(inbox).queryByRole('button', { name: 'Acknowledge collaboration item esc-action' })).not.toBeInTheDocument();
+    expect(within(inbox).getByRole('button', { name: 'Resolve collaboration item esc-action' })).toBeInTheDocument();
+    expect(within(inbox).getByText('escalation · urgent · acknowledged · demo-reviewer')).toBeInTheDocument();
+    expect(storage.setItem).toHaveBeenCalledTimes(1);
+    expect(storage.setItem).toHaveBeenCalledWith(
+      'agent-hangar:workspace-local-demo:collaboration-persistence:v1',
+      expect.stringContaining('"schemaVersion":"agent-hangar.collaboration-persistence.v1"'),
+    );
+
+    const history = screen.getByRole('region', { name: 'Audit history preview' });
+    expect(within(history).getByText('1 audit entry')).toBeInTheDocument();
+    expect(within(history).getByText('- Acknowledged items: 1')).toBeInTheDocument();
+    expect(within(history).getByText(/acknowledge open -> acknowledged/)).toBeInTheDocument();
+
+    fireEvent.click(within(history).getByRole('button', { name: 'Copy audit history preview' }));
+    await waitFor(() => expect(copyAuditHistory).toHaveBeenCalledTimes(1));
+    expect(copyAuditHistory.mock.calls[0]![0]).toContain('acknowledge open -> acknowledged');
+  });
+
+  it('resolves collaboration items with safe storage fallback and no secret-looking UI text', async () => {
+    const { graph, trail } = buildDemoExecutionTrail();
+    const trailSummary = replayExecutionTrail(graph, trail);
+    const storage = {
+      getItem: vi.fn(() => null),
+      setItem: vi.fn(() => {
+        throw new Error('localStorage unavailable');
+      }),
+    };
+    const collaborationItems = normalizeCollaborationInbox([
+      {
+        schemaVersion: 'agent-hangar.collaboration-inbox-item.v1',
+        id: 'review-secret',
+        type: 'review',
+        priority: 'high',
+        status: 'acknowledged',
+        assignedAgentId: 'demo-reviewer',
+        createdAt: '2026-05-23T10:09:00.000Z',
+        title: 'Review provider note',
+        body: 'sk-ui-secret and apiKey=sk-ui-secret should be hidden',
+      },
+    ]).items;
+
+    render(
+      <ExecutionGraphPanel
+        graph={graph}
+        trailSummary={trailSummary}
+        collaborationItems={collaborationItems}
+        collaborationStorage={storage}
+        collaborationClock={() => '2026-05-23T10:12:00.000Z'}
+        collaborationActorId="operator:test"
+      />,
+    );
+
+    const inbox = screen.getByRole('region', { name: 'Collaboration inbox' });
+    expect(within(inbox).queryByRole('button', { name: 'Acknowledge collaboration item review-secret' })).not.toBeInTheDocument();
+    expect(within(inbox).getByRole('button', { name: 'Resolve collaboration item review-secret' })).toBeInTheDocument();
+
+    fireEvent.click(within(inbox).getByRole('button', { name: 'Resolve collaboration item review-secret' }));
+
+    await waitFor(() => expect(within(inbox).getByRole('status')).toHaveTextContent('Resolved review-secret. Local persistence is unavailable.'));
+    expect(within(inbox).queryByRole('button', { name: /review-secret/ })).not.toBeInTheDocument();
+    expect(within(inbox).getByText('review · high · resolved · demo-reviewer')).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/apiKey|sk-ui-secret|encryptedKeyMaterial/);
+  });
 });

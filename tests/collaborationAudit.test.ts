@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
+  applyCollaborationInboxMutation,
   buildAuditHistoryPreview,
   normalizeCollaborationInbox,
   sortCollaborationInboxItems,
   type CollaborationInboxRecord,
+  type CollaborationMutationAuditEntry,
 } from '../src/harness/collaborationAudit';
 import { type ExecutionControlAuditEntry } from '../src/harness/executionControls';
 
@@ -186,6 +188,144 @@ describe('collaboration audit harness', () => {
     expect(preview.markdown).toContain('- Unresolved escalations: 1');
     expect(JSON.stringify(preview)).toContain('[redacted]');
     expect(JSON.stringify(preview)).not.toMatch(/apiKey|sk-audit-secret|sk-escalation-secret|customerRecord/);
+  });
+
+  it('acknowledges an open collaboration item with clone-safe sorted records, sanitized mutation audit, and persistence payload', () => {
+    const sourceItems = normalizeCollaborationInbox([
+      collaborationRecord({
+        id: 'low-open',
+        priority: 'low',
+        status: 'open',
+        createdAt: '2026-05-23T09:00:00.000Z',
+      }),
+      collaborationRecord({
+        id: 'urgent-open',
+        type: 'escalation',
+        priority: 'urgent',
+        status: 'open',
+        createdAt: '2026-05-23T10:00:00.000Z',
+        note: 'contains apiKey=sk-original-secret',
+      }),
+    ]).items;
+    const result = applyCollaborationInboxMutation(sourceItems, {
+      action: 'acknowledge',
+      itemId: 'urgent-open',
+      actorId: 'operator:test',
+      clock: () => '2026-05-23T10:10:00.000Z',
+      note: '  checking `provider` | apiKey=sk-live-secret  ',
+    });
+
+    expect(result.ok).toBe(true);
+    expect(sourceItems.find((item) => item.id === 'urgent-open')?.status).toBe('open');
+    expect(result.items).not.toBe(sourceItems);
+    expect(result.items.find((item) => item.id === 'urgent-open')).toMatchObject({
+      status: 'acknowledged',
+      note: 'checking \\`provider\\` \\| [redacted]',
+    });
+    expect(result.items.map((item) => item.id)).toEqual(['urgent-open', 'low-open']);
+    expect(result.auditEntries).toEqual([
+      {
+        schemaVersion: 'agent-hangar.collaboration-mutation-audit.v1',
+        id: 'collaboration-mutation:urgent-open:acknowledge:2026-05-23T10:10:00.000Z',
+        itemId: 'urgent-open',
+        actorId: 'operator:test',
+        action: 'acknowledge',
+        fromStatus: 'open',
+        toStatus: 'acknowledged',
+        occurredAt: '2026-05-23T10:10:00.000Z',
+        note: 'checking \\`provider\\` \\| [redacted]',
+      },
+    ]);
+    expect(result.persistencePayload).toMatchObject({
+      schemaVersion: 'agent-hangar.collaboration-persistence.v1',
+      collaborationItems: result.items,
+      mutationAuditEntries: result.auditEntries,
+      auditHistoryPreview: {
+        schemaVersion: 'agent-hangar.audit-history-preview.v1',
+        counts: {
+          collaborationItems: 2,
+          acknowledgedItems: 1,
+        },
+      },
+    });
+    expect(JSON.stringify(result.persistencePayload)).not.toMatch(/apiKey|sk-live-secret|sk-original-secret/);
+    expect(JSON.parse(JSON.stringify(result.persistencePayload))).toEqual(result.persistencePayload);
+  });
+
+  it('resolves an acknowledged collaboration item and appends mutation audit entries deterministically', () => {
+    const existingAudit: CollaborationMutationAuditEntry = {
+      schemaVersion: 'agent-hangar.collaboration-mutation-audit.v1',
+      id: 'collaboration-mutation:review-1:acknowledge:2026-05-23T10:10:00.000Z',
+      itemId: 'review-1',
+      actorId: 'operator:test',
+      action: 'acknowledge',
+      fromStatus: 'open',
+      toStatus: 'acknowledged',
+      occurredAt: '2026-05-23T10:10:00.000Z',
+    };
+    const result = applyCollaborationInboxMutation([
+      collaborationRecord({ id: 'review-1', priority: 'high', status: 'acknowledged' }),
+    ], {
+      action: 'resolve',
+      itemId: 'review-1',
+      actorId: 'operator:test',
+      clock: () => '2026-05-23T10:12:00.000Z',
+      reason: '  done with encryptedKeyMaterial=abc123  ',
+      existingAuditEntries: [existingAudit],
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.items[0]).toMatchObject({ id: 'review-1', status: 'resolved', note: 'done with [redacted]' });
+    expect(result.auditEntries.map((entry) => entry.action)).toEqual(['acknowledge', 'resolve']);
+    expect(result.auditEntries[1]).toMatchObject({
+      itemId: 'review-1',
+      action: 'resolve',
+      fromStatus: 'acknowledged',
+      toStatus: 'resolved',
+      reason: 'done with [redacted]',
+    });
+    expect(result.persistencePayload.auditHistoryPreview.counts.resolvedItems).toBe(1);
+    expect(JSON.stringify(result)).not.toMatch(/encryptedKeyMaterial|abc123/);
+  });
+
+  it('returns typed mutation issues for unknown ids and invalid resolved-item transitions without mutating records', () => {
+    const sourceItems = normalizeCollaborationInbox([
+      collaborationRecord({ id: 'resolved-1', status: 'resolved', note: 'done' }),
+    ]).items;
+    const unknown = applyCollaborationInboxMutation(sourceItems, {
+      action: 'resolve',
+      itemId: 'missing-1',
+      actorId: 'operator:test',
+      clock: () => '2026-05-23T10:15:00.000Z',
+    });
+    const invalid = applyCollaborationInboxMutation(sourceItems, {
+      action: 'acknowledge',
+      itemId: 'resolved-1',
+      actorId: 'operator:test',
+      clock: () => '2026-05-23T10:16:00.000Z',
+    });
+
+    expect(unknown.ok).toBe(false);
+    expect(unknown.issue).toEqual({
+      code: 'unknown-item-id',
+      severity: 'blocking',
+      itemId: 'missing-1',
+      action: 'resolve',
+      message: 'Collaboration item missing-1 was not found.',
+    });
+    expect(unknown.items).toEqual(sourceItems);
+    expect(unknown.auditEntries).toEqual([]);
+    expect(invalid.ok).toBe(false);
+    expect(invalid.issue).toEqual({
+      code: 'invalid-transition',
+      severity: 'blocking',
+      itemId: 'resolved-1',
+      action: 'acknowledge',
+      message: 'Collaboration item resolved-1 cannot transition from resolved to acknowledged.',
+    });
+    expect(invalid.items).toEqual(sourceItems);
+    expect(invalid.auditEntries).toEqual([]);
+    expect(sourceItems[0]).toMatchObject({ id: 'resolved-1', status: 'resolved', note: 'done' });
   });
 });
 
