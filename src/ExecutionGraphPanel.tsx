@@ -1,22 +1,37 @@
-import React, { useMemo } from 'react';
-import { GitBranch } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { Clipboard, GitBranch } from 'lucide-react';
 import {
   buildExecutionGraphSummary,
   validateExecutionGraph,
   type ExecutionGraph,
 } from './harness/executionGraph';
 import { type ExecutionTrailSummary } from './harness/executionTrail';
+import { formatRunEvidenceExport } from './harness/runEvidenceExport';
 
 export interface ExecutionGraphPanelProps {
   graph: ExecutionGraph;
   trailSummary?: ExecutionTrailSummary;
   secretPreview?: string;
+  copyRunEvidence?: (markdown: string) => void | Promise<void>;
 }
 
-export function ExecutionGraphPanel({ graph, trailSummary }: ExecutionGraphPanelProps) {
+export function ExecutionGraphPanel({ graph, trailSummary, copyRunEvidence }: ExecutionGraphPanelProps) {
+  const [copyState, setCopyState] = useState<'idle' | 'copied'>('idle');
   const issues = useMemo(() => validateExecutionGraph(graph), [graph]);
   const summary = useMemo(() => buildExecutionGraphSummary(graph), [graph]);
+  const runEvidenceExport = useMemo(() => (
+    trailSummary
+      ? formatRunEvidenceExport({ trailSummary, graphSummary: summary, graphIssues: issues })
+      : undefined
+  ), [issues, summary, trailSummary]);
   const blockingLabel = `${summary.blockingIssueCount} blocking ${summary.blockingIssueCount === 1 ? 'issue' : 'issues'}`;
+  const handleCopyRunEvidence = () => {
+    if (!runEvidenceExport) {
+      return;
+    }
+    const copy = copyRunEvidence ?? ((markdown: string) => navigator.clipboard?.writeText(markdown));
+    void Promise.resolve(copy(runEvidenceExport.markdown)).then(() => setCopyState('copied'));
+  };
 
   return (
     <section className="panel execution-graph" aria-labelledby="execution-graph-heading">
@@ -94,6 +109,29 @@ export function ExecutionGraphPanel({ graph, trailSummary }: ExecutionGraphPanel
               </li>
             ))}
           </ol>
+        </div>
+      ) : null}
+
+      {runEvidenceExport ? (
+        <div className="run-evidence-preview" aria-labelledby="run-evidence-heading">
+          <div className="trail-heading">
+            <div>
+              <h3 id="run-evidence-heading">Run evidence export</h3>
+              <div className="summary-grid trail-summary" aria-label="Run evidence export metadata">
+                <span>{runEvidenceExport.schemaVersion}</span>
+                <span>{runEvidenceExport.workspaceId}</span>
+              </div>
+            </div>
+            <button className="icon-button" type="button" onClick={handleCopyRunEvidence} aria-label="Copy run evidence export" title="Copy run evidence export">
+              <Clipboard size={18} aria-hidden="true" />
+            </button>
+          </div>
+          <pre className="run-evidence-markdown" aria-label="Run evidence export preview">
+            {runEvidenceExport.markdown.split('\n').map((line, index) => (
+              <code key={`${index}-${line}`}>{line || ' '}</code>
+            ))}
+          </pre>
+          {copyState === 'copied' ? <p className="copy-status" role="status">Copied run evidence export.</p> : null}
         </div>
       ) : null}
     </section>
