@@ -2,6 +2,7 @@ import React from 'react';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { ExecutionGraphPanel } from '../src/ExecutionGraphPanel';
+import { normalizeCollaborationInbox } from '../src/harness/collaborationAudit';
 import { buildDemoExecutionTrail, replayExecutionTrail } from '../src/harness/executionTrail';
 import { createExecutionGraphFromTemplates } from '../src/harness/executionGraph';
 import { createPromptTemplate } from '../src/harness/promptTemplates';
@@ -148,5 +149,65 @@ describe('ExecutionGraphPanel', () => {
     expect(within(controls).queryByRole('button', { name: /Pause local run/i })).not.toBeInTheDocument();
     expect(within(controls).queryByRole('button', { name: /Cancel local run/i })).not.toBeInTheDocument();
     expect(within(controls).queryByRole('button', { name: /Retry local run/i })).not.toBeInTheDocument();
+  });
+
+  it('renders collaboration inbox and audit-history preview regions without leaking secret-like content', async () => {
+    const { graph, trail } = buildDemoExecutionTrail();
+    const trailSummary = replayExecutionTrail(graph, trail);
+    const copyAuditHistory = vi.fn();
+    const collaborationItems = normalizeCollaborationInbox([
+      {
+        schemaVersion: 'agent-hangar.collaboration-inbox-item.v1',
+        id: 'esc-ui',
+        type: 'escalation',
+        priority: 'urgent',
+        status: 'open',
+        assignedAgentId: 'demo-reviewer',
+        createdAt: '2026-05-23T10:09:00.000Z',
+        title: 'Provider handoff blocked',
+        body: 'apiKey=sk-ui-secret must never render',
+        note: 'encryptedKeyMaterial=abc123 must never render',
+      },
+      {
+        schemaVersion: 'agent-hangar.collaboration-inbox-item.v1',
+        id: 'review-ui',
+        type: 'review',
+        priority: 'high',
+        status: 'acknowledged',
+        assignedAgentId: 'demo-reviewer',
+        createdAt: '2026-05-23T10:08:00.000Z',
+        title: 'Review local evidence',
+      },
+    ]).items;
+
+    render(
+      <ExecutionGraphPanel
+        graph={graph}
+        trailSummary={trailSummary}
+        collaborationItems={collaborationItems}
+        copyAuditHistory={copyAuditHistory}
+      />,
+    );
+
+    const inbox = screen.getByRole('region', { name: 'Collaboration inbox' });
+    expect(within(inbox).getByRole('heading', { name: 'Collaboration inbox' })).toBeInTheDocument();
+    expect(within(inbox).getByText('2 unresolved')).toBeInTheDocument();
+    expect(within(inbox).getByText('1 urgent')).toBeInTheDocument();
+    expect(within(inbox).getByText('Provider handoff blocked')).toBeInTheDocument();
+    expect(within(inbox).getByText('escalation · urgent · open · demo-reviewer')).toBeInTheDocument();
+
+    const history = screen.getByRole('region', { name: 'Audit history preview' });
+    expect(within(history).getByRole('heading', { name: 'Audit history preview' })).toBeInTheDocument();
+    expect(within(history).getByText('1 unresolved escalation')).toBeInTheDocument();
+    expect(within(history).getByText('Resolve 1 urgent escalation before starting more local execution.')).toBeInTheDocument();
+    expect(within(history).getByText('- Unresolved escalations: 1')).toBeInTheDocument();
+
+    fireEvent.click(within(history).getByRole('button', { name: 'Copy audit history preview' }));
+
+    expect(copyAuditHistory).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(within(history).getByRole('status')).toHaveTextContent('Copied audit history preview.'));
+    expect(copyAuditHistory.mock.calls[0]![0]).toContain('schemaVersion: agent-hangar.audit-history-preview.v1');
+    expect(document.body.textContent).not.toMatch(/apiKey|sk-ui-secret|encryptedKeyMaterial|abc123/);
+    expect(copyAuditHistory.mock.calls[0]![0]).not.toMatch(/apiKey|sk-ui-secret|encryptedKeyMaterial|abc123/);
   });
 });
