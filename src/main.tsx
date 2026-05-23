@@ -5,8 +5,8 @@ import { ExecutionGraphPanel } from './ExecutionGraphPanel';
 import { ProviderProfilePanel } from './ProviderProfilePanel';
 import { TemplateStudioPanel } from './TemplateStudioPanel';
 import { createAgentRun, transitionRun } from './harness/agentRuntime';
-import { normalizeCollaborationInbox } from './harness/collaborationAudit';
-import { buildDemoExecutionTrail, replayExecutionTrail } from './harness/executionTrail';
+import { buildDemoWorkspaceSeed } from './harness/demoWorkspace';
+import { replayExecutionTrail } from './harness/executionTrail';
 import { type NormalizedModel } from './harness/providerCatalog';
 import { createProfileFromDraft } from './harness/providerProfileFlow';
 import { localDemoProviderProfileCrypto } from './harness/providerProfiles';
@@ -91,32 +91,10 @@ const escalationPolicies = [
   { id: 'default-escalation', label: 'Default escalation' },
   { id: 'review-escalation', label: 'Review escalation' },
 ];
-const demoTrail = buildDemoExecutionTrail();
+const demoWorkspace = buildDemoWorkspaceSeed();
+const demoTrail = { graph: demoWorkspace.graph, trail: demoWorkspace.trail };
 const demoTrailSummary = replayExecutionTrail(demoTrail.graph, demoTrail.trail);
-const demoCollaborationItems = normalizeCollaborationInbox([
-  {
-    schemaVersion: 'agent-hangar.collaboration-inbox-item.v1',
-    id: 'collab-demo-delegation',
-    type: 'delegation',
-    priority: 'high',
-    status: 'open',
-    assignedAgentId: 'demo-researcher',
-    createdAt: '2026-05-23T10:08:00.000Z',
-    title: 'Researcher evidence handoff',
-    body: 'Collect local-only evidence for planner review.',
-  },
-  {
-    schemaVersion: 'agent-hangar.collaboration-inbox-item.v1',
-    id: 'collab-demo-review',
-    type: 'review',
-    priority: 'normal',
-    status: 'acknowledged',
-    assignedAgentId: 'demo-reviewer',
-    createdAt: '2026-05-23T10:09:00.000Z',
-    title: 'Review acceptance coverage',
-    body: 'Confirm guarded controls and export previews remain secret-safe.',
-  },
-]).items;
+const demoCollaborationItems = demoWorkspace.collaborationItems;
 const runs = [
   transitionRun(createAgentRun('task-1', 'planner'), 'working'),
   transitionRun(createAgentRun('task-1', 'researcher'), 'completed'),

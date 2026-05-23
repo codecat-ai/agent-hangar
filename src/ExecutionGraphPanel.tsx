@@ -101,6 +101,16 @@ export function ExecutionGraphPanel({
   const blockingLabel = `${summary.blockingIssueCount} blocking ${summary.blockingIssueCount === 1 ? 'issue' : 'issues'}`;
   const unresolvedCollaborationCount = sortedCollaborationItems.filter((item) => item.status !== 'resolved').length;
   const urgentCollaborationCount = sortedCollaborationItems.filter((item) => item.priority === 'urgent').length;
+  const demoWorkspaceRoles = useMemo(
+    () => [...new Set(graph.nodes.map((node) => node.role.trim()).filter(Boolean))],
+    [graph.nodes],
+  );
+  const collaborationTypeCounts = useMemo(() => ({
+    delegation: sortedCollaborationItems.filter((item) => item.type === 'delegation').length,
+    review: sortedCollaborationItems.filter((item) => item.type === 'review').length,
+    broadcast: sortedCollaborationItems.filter((item) => item.type === 'broadcast').length,
+    escalation: sortedCollaborationItems.filter((item) => item.type === 'escalation').length,
+  }), [sortedCollaborationItems]);
 
   useEffect(() => {
     setControlState(initialControlState);
@@ -213,6 +223,27 @@ export function ExecutionGraphPanel({
           )}
         </div>
       </div>
+
+      {sortedCollaborationItems.length > 0 ? (
+        <section className="demo-workspace-summary" aria-labelledby="demo-workspace-summary-heading">
+          <div className="trail-heading">
+            <div>
+              <h3 id="demo-workspace-summary-heading">Demo workspace summary</h3>
+              <p>{demoWorkspaceRoles.length} {demoWorkspaceRoles.length === 1 ? 'role' : 'roles'}</p>
+            </div>
+          </div>
+          <div className="summary-grid trail-summary" aria-label="Demo workspace coordination summary">
+            <span>{demoWorkspaceRoles.join(', ')}</span>
+            <span>
+              delegation {collaborationTypeCounts.delegation} · review {collaborationTypeCounts.review} · broadcast {collaborationTypeCounts.broadcast} · escalation {collaborationTypeCounts.escalation}
+            </span>
+          </div>
+          <div className="control-audit-preview">
+            <strong>Next operator action</strong>
+            <p>{auditHistoryPreview.nextActionHints[0]}</p>
+          </div>
+        </section>
+      ) : null}
 
       {issues.length > 0 ? (
         <ul className="issue-list" aria-label="Execution graph issues">

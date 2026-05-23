@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { describe, expect, it, vi } from 'vitest';
 import { ExecutionGraphPanel } from '../src/ExecutionGraphPanel';
 import { normalizeCollaborationInbox } from '../src/harness/collaborationAudit';
+import { buildDemoWorkspaceSeed } from '../src/harness/demoWorkspace';
 import { buildDemoExecutionTrail, replayExecutionTrail } from '../src/harness/executionTrail';
 import { createExecutionGraphFromTemplates } from '../src/harness/executionGraph';
 import { createPromptTemplate } from '../src/harness/promptTemplates';
@@ -79,13 +80,30 @@ describe('ExecutionGraphPanel', () => {
     render(<ExecutionGraphPanel graph={graph} trailSummary={trailSummary} secretPreview="sk-ui-secret" />);
 
     expect(screen.getByRole('heading', { name: 'Local execution trail' })).toBeInTheDocument();
-    expect(screen.getByText('8 events')).toBeInTheDocument();
+    expect(screen.getByText('11 events')).toBeInTheDocument();
     expect(screen.getByText('0 trail issues')).toBeInTheDocument();
-    expect(screen.getByText('3 completed')).toBeInTheDocument();
+    expect(screen.getByText('4 completed')).toBeInTheDocument();
     expect(screen.getByText('Task created')).toBeInTheDocument();
+    expect(screen.getByText('Implementation completed')).toBeInTheDocument();
     expect(screen.getByText('Review completed')).toBeInTheDocument();
     expect(screen.getByText('review-completed · accepted')).toBeInTheDocument();
     expect(document.body.textContent).not.toContain('sk-ui-secret');
+  });
+
+  it('renders an accessible compact demo workspace coordination summary', () => {
+    const seed = buildDemoWorkspaceSeed();
+    const trailSummary = replayExecutionTrail(seed.graph, seed.trail);
+
+    render(<ExecutionGraphPanel graph={seed.graph} trailSummary={trailSummary} collaborationItems={seed.collaborationItems} />);
+
+    const demoSummary = screen.getByRole('region', { name: 'Demo workspace summary' });
+    expect(within(demoSummary).getByRole('heading', { name: 'Demo workspace summary' })).toBeInTheDocument();
+    expect(within(demoSummary).getByText('4 roles')).toBeInTheDocument();
+    expect(within(demoSummary).getByText('planner, researcher, implementer, reviewer')).toBeInTheDocument();
+    expect(within(demoSummary).getByText('delegation 1 · review 1 · broadcast 1 · escalation 1')).toBeInTheDocument();
+    expect(within(demoSummary).getByText('Next operator action')).toBeInTheDocument();
+    expect(within(demoSummary).getByText('Resolve 1 urgent escalation before starting more local execution.')).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/apiKey|encryptedKeyMaterial|sk-[A-Za-z0-9._-]{8,}|customer[A-Za-z0-9_-]*|\bcurl\b|\bnpm\s+(?:run|install|exec|test|start)\b/);
   });
 
   it('renders local run evidence export preview text and copies through an injected side effect', async () => {
@@ -98,9 +116,9 @@ describe('ExecutionGraphPanel', () => {
     expect(screen.getByRole('heading', { name: 'Run evidence export' })).toBeInTheDocument();
     expect(screen.getByText('agent-hangar.run-evidence-export.v1')).toBeInTheDocument();
     expect(screen.getByText('workspace-local-demo')).toBeInTheDocument();
-    expect(screen.getByText('- Events: 8')).toBeInTheDocument();
+    expect(screen.getByText('- Events: 11')).toBeInTheDocument();
     expect(screen.getByText('- Graph issues: 0')).toBeInTheDocument();
-    expect(screen.getByText('- 2026-05-23T10:07:00.000Z | review-completed | accepted | demo-reviewer | Review completed | node: demo-reviewer | Reviewer accepts the local demo trail.')).toBeInTheDocument();
+    expect(screen.getByText('- 2026-05-23T10:10:00.000Z | review-completed | accepted | demo-reviewer | Review completed | node: demo-reviewer | Reviewer accepts the local demo workspace trail.')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Copy run evidence export' }));
 

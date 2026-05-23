@@ -4,6 +4,7 @@ import {
   type ExecutionGraph,
   type ExecutionNodeStatus,
 } from './executionGraph';
+import { buildDemoWorkspaceSeed } from './demoWorkspace';
 
 export type ExecutionTrailEventKind =
   | 'task-created'
@@ -132,37 +133,8 @@ export function replayExecutionTrail(graph: ExecutionGraph, trail: ExecutionTrai
 }
 
 export function buildDemoExecutionTrail(): { graph: ExecutionGraph; trail: ExecutionTrail } {
-  const graph: ExecutionGraph = {
-    schemaVersion: 'agent-hangar.execution-graph.v1',
-    workspaceId: 'workspace-local-demo',
-    nodes: [
-      demoNode('demo-planner', 'Planner', 'planner', 'completed', 'template-demo-planner', 'local-model-planner'),
-      demoNode('demo-researcher', 'Researcher', 'researcher', 'queued', 'template-demo-researcher', 'local-model-researcher'),
-      demoNode('demo-reviewer', 'Reviewer', 'reviewer', 'queued', 'template-demo-reviewer', 'local-model-reviewer'),
-    ],
-    edges: [
-      { id: 'demo-planner->demo-researcher', from: 'demo-planner', to: 'demo-researcher', kind: 'handoff', label: 'research handoff' },
-      { id: 'demo-researcher->demo-reviewer', from: 'demo-researcher', to: 'demo-reviewer', kind: 'handoff', label: 'review handoff' },
-    ],
-  };
-
-  return {
-    graph,
-    trail: {
-      schemaVersion: 'agent-hangar.execution-trail.v1',
-      workspaceId: 'workspace-local-demo',
-      events: [
-        event('evt-001', '2026-05-23T10:00:00.000Z', 'task-created', 'operator-demo', 'Task created', undefined, 'Prepare a local release-readiness brief.'),
-        event('evt-002', '2026-05-23T10:01:00.000Z', 'plan-created', 'demo-planner', 'Plan created', 'demo-planner', 'Planner outlines research, implementation, and review checkpoints.'),
-        event('evt-003', '2026-05-23T10:02:00.000Z', 'agent-assigned', 'operator-demo', 'Researcher assigned', 'demo-researcher', 'Researcher owns local evidence gathering.'),
-        event('evt-004', '2026-05-23T10:03:00.000Z', 'node-started', 'demo-researcher', 'Research started', 'demo-researcher', 'Researcher starts from source-checkout fixtures only.'),
-        event('evt-005', '2026-05-23T10:04:00.000Z', 'node-completed', 'demo-researcher', 'Research completed', 'demo-researcher', 'Research notes are ready for planner handoff.'),
-        event('evt-006', '2026-05-23T10:05:00.000Z', 'handoff-requested', 'demo-planner', 'Review handoff requested', 'demo-reviewer', 'Planner sends deterministic local evidence to review.'),
-        event('evt-007', '2026-05-23T10:06:00.000Z', 'agent-assigned', 'operator-demo', 'Reviewer assigned', 'demo-reviewer', 'Reviewer checks acceptance criteria and secret safety.'),
-        event('evt-008', '2026-05-23T10:07:00.000Z', 'review-completed', 'demo-reviewer', 'Review completed', 'demo-reviewer', 'Reviewer accepts the local demo trail.'),
-      ],
-    },
-  };
+  const seed = buildDemoWorkspaceSeed();
+  return { graph: seed.graph, trail: seed.trail };
 }
 
 function sortTrailEvents(events: ExecutionTrailEvent[]): ExecutionTrailEvent[] {
@@ -215,38 +187,4 @@ function createEmptyEventKindCounts(): Record<ExecutionTrailEventKind, number> {
     'review-completed': 0,
     'node-completed': 0,
   };
-}
-
-function demoNode(
-  id: string,
-  title: string,
-  role: string,
-  status: ExecutionNodeStatus,
-  templateId: string,
-  modelId: string,
-): ExecutionGraph['nodes'][number] {
-  return {
-    id,
-    title,
-    role,
-    status,
-    templateBinding: {
-      templateId,
-      providerProfileId: 'local-provider-demo',
-      modelId,
-      escalationPolicyId: 'local-escalation-demo',
-    },
-  };
-}
-
-function event(
-  id: string,
-  occurredAt: string,
-  kind: ExecutionTrailEventKind,
-  actorId: string,
-  title: string,
-  nodeId: string | undefined,
-  note: string,
-): ExecutionTrailEvent {
-  return { id, occurredAt, kind, actorId, title, nodeId, note };
 }
