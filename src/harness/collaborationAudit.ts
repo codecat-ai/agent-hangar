@@ -3,6 +3,7 @@ import { type ExecutionControlAuditEntry } from './executionControls';
 export type CollaborationInboxType = 'delegation' | 'review' | 'broadcast' | 'escalation';
 export type CollaborationInboxPriority = 'low' | 'normal' | 'high' | 'urgent';
 export type CollaborationInboxStatus = 'open' | 'acknowledged' | 'resolved';
+export type CollaborationMutationAction = 'acknowledge' | 'resolve';
 
 export interface CollaborationInboxRecord {
   schemaVersion: 'agent-hangar.collaboration-inbox-item.v1';
@@ -40,8 +41,60 @@ export interface CollaborationInboxNormalizationResult {
   issues: CollaborationInboxIssue[];
 }
 
+export interface CollaborationMutationAuditEntry {
+  schemaVersion: 'agent-hangar.collaboration-mutation-audit.v1';
+  id: string;
+  itemId: string;
+  actorId: string;
+  action: CollaborationMutationAction;
+  fromStatus: CollaborationInboxStatus;
+  toStatus: CollaborationInboxStatus;
+  occurredAt: string;
+  reason?: string;
+  note?: string;
+}
+
+export type AuditHistoryInputEntry = ExecutionControlAuditEntry | CollaborationMutationAuditEntry;
+
+export interface CollaborationPersistencePayload {
+  schemaVersion: 'agent-hangar.collaboration-persistence.v1';
+  collaborationItems: CollaborationInboxRecord[];
+  mutationAuditEntries: CollaborationMutationAuditEntry[];
+  auditHistoryPreview: AuditHistoryPreview;
+}
+
+export type CollaborationMutationIssueCode = 'unknown-item-id' | 'invalid-transition';
+
+export interface CollaborationMutationIssue {
+  code: CollaborationMutationIssueCode;
+  severity: 'blocking';
+  itemId: string;
+  action: CollaborationMutationAction;
+  message: string;
+}
+
+export interface CollaborationMutationOptions {
+  action: CollaborationMutationAction;
+  itemId: string;
+  actorId: string;
+  clock: () => string;
+  reason?: string;
+  note?: string;
+  existingAuditEntries?: CollaborationMutationAuditEntry[];
+  auditHistoryEntries?: ExecutionControlAuditEntry[];
+}
+
+export interface CollaborationMutationResult {
+  schemaVersion: 'agent-hangar.collaboration-mutation-result.v1';
+  ok: boolean;
+  items: CollaborationInboxRecord[];
+  auditEntries: CollaborationMutationAuditEntry[];
+  persistencePayload: CollaborationPersistencePayload;
+  issue?: CollaborationMutationIssue;
+}
+
 export interface AuditHistoryPreviewInput {
-  auditEntries: ExecutionControlAuditEntry[];
+  auditEntries: AuditHistoryInputEntry[];
   collaborationItems: CollaborationInboxRecord[];
   recentLimit?: number;
 }
@@ -76,6 +129,9 @@ export interface AuditHistoryPreview {
 const COLLABORATION_SCHEMA_VERSION = 'agent-hangar.collaboration-inbox-item.v1';
 const NORMALIZATION_SCHEMA_VERSION = 'agent-hangar.collaboration-inbox-normalization.v1';
 const AUDIT_HISTORY_SCHEMA_VERSION = 'agent-hangar.audit-history-preview.v1';
+const COLLABORATION_MUTATION_AUDIT_SCHEMA_VERSION = 'agent-hangar.collaboration-mutation-audit.v1';
+const COLLABORATION_PERSISTENCE_SCHEMA_VERSION = 'agent-hangar.collaboration-persistence.v1';
+const COLLABORATION_MUTATION_RESULT_SCHEMA_VERSION = 'agent-hangar.collaboration-mutation-result.v1';
 const COLLABORATION_TYPES: CollaborationInboxType[] = ['delegation', 'review', 'broadcast', 'escalation'];
 const PRIORITIES: CollaborationInboxPriority[] = ['low', 'normal', 'high', 'urgent'];
 const STATUSES: CollaborationInboxStatus[] = ['open', 'acknowledged', 'resolved'];
@@ -137,9 +193,88 @@ export function sortCollaborationInboxItems(items: CollaborationInboxRecord[]): 
   });
 }
 
+export function applyCollaborationInboxMutation(
+  items: CollaborationInboxRecord[],
+  options: CollaborationMutationOptions,
+): CollaborationMutationResult {
+  const clonedItems = sortCollaborationInboxItems(items.map(cloneCollaborationItem));
+  const existingAuditEntries = (options.existingAuditEntries ?? []).map(sanitizeMutationAuditEntry);
+  const itemId = sanitizeIdentifier(options.itemId);
+  const actorId = sanitizeIdentifier(options.actorId);
+  const itemIndex = clonedItems.findIndex((item) => item.id === itemId);
+
+  if (itemIndex === -1) {
+    return mutationResult({
+      ok: false,
+      items: clonedItems,
+      auditEntries: existingAuditEntries,
+      issue: {
+        code: 'unknown-item-id',
+        severity: 'blocking',
+        itemId,
+        action: options.action,
+        message: `Collaboration item ${itemId} was not found.`,
+      },
+      auditHistoryEntries: options.auditHistoryEntries,
+    });
+  }
+
+  const item = clonedItems[itemIndex]!;
+  const toStatus = statusForMutationAction(options.action);
+  if (!canTransitionCollaborationItem(item.status, options.action)) {
+    return mutationResult({
+      ok: false,
+      items: clonedItems,
+      auditEntries: existingAuditEntries,
+      issue: {
+        code: 'invalid-transition',
+        severity: 'blocking',
+        itemId,
+        action: options.action,
+        message: `Collaboration item ${itemId} cannot transition from ${item.status} to ${toStatus}.`,
+      },
+      auditHistoryEntries: options.auditHistoryEntries,
+    });
+  }
+
+  const occurredAt = safeText(options.clock(), TEXT_LIMIT);
+  const reason = options.reason;
+  const note = options.note ?? options.reason;
+  const updatedItem: CollaborationInboxRecord = {
+    ...item,
+    status: toStatus,
+    ...(note ? { note } : {}),
+  };
+  const updatedItems = sortCollaborationInboxItems([
+    ...clonedItems.slice(0, itemIndex),
+    updatedItem,
+    ...clonedItems.slice(itemIndex + 1),
+  ]);
+  const auditEntry: CollaborationMutationAuditEntry = {
+    schemaVersion: COLLABORATION_MUTATION_AUDIT_SCHEMA_VERSION,
+    id: `collaboration-mutation:${itemId}:${options.action}:${occurredAt}`,
+    itemId,
+    actorId,
+    action: options.action,
+    fromStatus: item.status,
+    toStatus,
+    occurredAt,
+    ...(reason ? { reason } : {}),
+    ...(note ? { note } : {}),
+  };
+  const auditEntries = [...existingAuditEntries, auditEntry];
+
+  return mutationResult({
+    ok: true,
+    items: updatedItems,
+    auditEntries,
+    auditHistoryEntries: options.auditHistoryEntries,
+  });
+}
+
 export function buildAuditHistoryPreview(input: AuditHistoryPreviewInput): AuditHistoryPreview {
   const sortedCollaborationItems = sortCollaborationInboxItems(input.collaborationItems);
-  const sanitizedAuditEntries = input.auditEntries.map(sanitizeAuditEntry);
+  const sanitizedAuditEntries = input.auditEntries.map(sanitizeAuditHistoryInputEntry);
   const counts = {
     auditEntries: sanitizedAuditEntries.length,
     collaborationItems: sortedCollaborationItems.length,
@@ -219,7 +354,22 @@ function collaborationToRecentEntry(item: CollaborationInboxRecord): AuditHistor
   };
 }
 
-function auditToRecentEntry(entry: ExecutionControlAuditEntry): AuditHistoryRecentEntry {
+function auditToRecentEntry(entry: AuditHistoryInputEntry): AuditHistoryRecentEntry {
+  if (isCollaborationMutationAuditEntry(entry)) {
+    return {
+      id: `collaboration-audit:${entry.id}`,
+      source: 'audit',
+      occurredAt: entry.occurredAt,
+      title: `${entry.action} ${entry.fromStatus} -> ${entry.toStatus}`,
+      detail: safeText([
+        entry.actorId,
+        `item: ${entry.itemId}`,
+        entry.reason,
+        entry.note,
+      ].filter(Boolean).join(' · '), BODY_LIMIT),
+    };
+  }
+
   return {
     id: `audit:${entry.id}`,
     source: 'audit',
@@ -281,6 +431,10 @@ function renderRecentEntry(entry: AuditHistoryRecentEntry): string {
   return `- ${entry.occurredAt} | ${entry.source} | ${entry.title} | ${entry.detail}`;
 }
 
+function sanitizeAuditHistoryInputEntry(entry: AuditHistoryInputEntry): AuditHistoryInputEntry {
+  return isCollaborationMutationAuditEntry(entry) ? sanitizeMutationAuditEntry(entry) : sanitizeAuditEntry(entry);
+}
+
 function sanitizeAuditEntry(entry: ExecutionControlAuditEntry): ExecutionControlAuditEntry {
   return {
     schemaVersion: 'agent-hangar.execution-control-audit.v1',
@@ -295,6 +449,94 @@ function sanitizeAuditEntry(entry: ExecutionControlAuditEntry): ExecutionControl
     ...(entry.reason ? { reason: safeText(entry.reason, BODY_LIMIT) } : {}),
     ...(entry.note ? { note: safeText(entry.note, BODY_LIMIT) } : {}),
   };
+}
+
+function sanitizeMutationAuditEntry(entry: CollaborationMutationAuditEntry): CollaborationMutationAuditEntry {
+  return {
+    schemaVersion: COLLABORATION_MUTATION_AUDIT_SCHEMA_VERSION,
+    id: sanitizeIdentifier(entry.id),
+    itemId: sanitizeIdentifier(entry.itemId),
+    actorId: sanitizeIdentifier(entry.actorId),
+    action: entry.action,
+    fromStatus: entry.fromStatus,
+    toStatus: entry.toStatus,
+    occurredAt: safeText(entry.occurredAt, TEXT_LIMIT),
+    ...(entry.reason ? { reason: safeText(entry.reason, BODY_LIMIT) } : {}),
+    ...(entry.note ? { note: safeText(entry.note, BODY_LIMIT) } : {}),
+  };
+}
+
+function mutationResult(input: {
+  ok: boolean;
+  items: CollaborationInboxRecord[];
+  auditEntries: CollaborationMutationAuditEntry[];
+  issue?: CollaborationMutationIssue;
+  auditHistoryEntries?: ExecutionControlAuditEntry[];
+}): CollaborationMutationResult {
+  const items = sortCollaborationInboxItems(input.items.map(cloneCollaborationItem));
+  const auditEntries = input.auditEntries.map(sanitizeMutationAuditEntry);
+  const persistencePayload = buildCollaborationPersistencePayload({
+    items,
+    mutationAuditEntries: auditEntries,
+    auditHistoryEntries: input.auditHistoryEntries ?? [],
+  });
+  return {
+    schemaVersion: COLLABORATION_MUTATION_RESULT_SCHEMA_VERSION,
+    ok: input.ok,
+    items,
+    auditEntries,
+    persistencePayload,
+    ...(input.issue ? { issue: input.issue } : {}),
+  };
+}
+
+function buildCollaborationPersistencePayload(input: {
+  items: CollaborationInboxRecord[];
+  mutationAuditEntries: CollaborationMutationAuditEntry[];
+  auditHistoryEntries: ExecutionControlAuditEntry[];
+}): CollaborationPersistencePayload {
+  const collaborationItems = sortCollaborationInboxItems(input.items.map(cloneCollaborationItem));
+  const mutationAuditEntries = input.mutationAuditEntries.map(sanitizeMutationAuditEntry);
+  const auditHistoryEntries = input.auditHistoryEntries.map(sanitizeAuditEntry);
+  return {
+    schemaVersion: COLLABORATION_PERSISTENCE_SCHEMA_VERSION,
+    collaborationItems,
+    mutationAuditEntries,
+    auditHistoryPreview: buildAuditHistoryPreview({
+      auditEntries: [...auditHistoryEntries, ...mutationAuditEntries],
+      collaborationItems,
+    }),
+  };
+}
+
+function cloneCollaborationItem(item: CollaborationInboxRecord): CollaborationInboxRecord {
+  return {
+    schemaVersion: COLLABORATION_SCHEMA_VERSION,
+    id: sanitizeIdentifier(item.id),
+    type: item.type,
+    priority: item.priority,
+    status: item.status,
+    ...(item.assignedAgentId ? { assignedAgentId: sanitizeIdentifier(item.assignedAgentId) } : {}),
+    createdAt: safeText(item.createdAt, TEXT_LIMIT),
+    title: safeText(item.title, TEXT_LIMIT),
+    ...(item.body ? { body: safeText(item.body, BODY_LIMIT) } : {}),
+    ...(item.note ? { note: safeText(item.note, BODY_LIMIT) } : {}),
+  };
+}
+
+function statusForMutationAction(action: CollaborationMutationAction): CollaborationInboxStatus {
+  return action === 'acknowledge' ? 'acknowledged' : 'resolved';
+}
+
+function canTransitionCollaborationItem(status: CollaborationInboxStatus, action: CollaborationMutationAction): boolean {
+  if (action === 'acknowledge') {
+    return status === 'open';
+  }
+  return status === 'open' || status === 'acknowledged';
+}
+
+function isCollaborationMutationAuditEntry(entry: AuditHistoryInputEntry): entry is CollaborationMutationAuditEntry {
+  return entry.schemaVersion === COLLABORATION_MUTATION_AUDIT_SCHEMA_VERSION;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -321,7 +563,7 @@ function redactSecretLikeText(value: string): string {
 }
 
 function escapeMarkdown(value: string): string {
-  return value.replace(/[\\|`]/g, '\\$&');
+  return value.replace(/(?<!\\)([|`])/g, '\\$1');
 }
 
 function truncate(value: string, limit: number): string {
