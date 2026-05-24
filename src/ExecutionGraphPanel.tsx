@@ -37,6 +37,7 @@ import {
   buildWorkspaceManifestPreview,
   type WorkspaceManifestPreview,
 } from './harness/workspaceManifestPreview';
+import { buildWorkspaceImportExportDryRun } from './harness/workspaceImportExportDryRun';
 import { type EscalationPolicyRecord, type PromptTemplateRecord, type WorkspaceToolRecord } from './harness/promptTemplates';
 
 export interface ExecutionGraphPanelProps {
@@ -59,6 +60,7 @@ export interface ExecutionGraphPanelProps {
   copyAuditHistory?: (markdown: string) => void | Promise<void>;
   copyScenarioEvidenceBundle?: (markdown: string) => void | Promise<void>;
   copyWorkspaceManifest?: (markdown: string) => void | Promise<void>;
+  copyWorkspaceDryRun?: (markdown: string) => void | Promise<void>;
 }
 
 interface CollaborationStorage {
@@ -106,6 +108,7 @@ export function ExecutionGraphPanel({
   copyAuditHistory,
   copyScenarioEvidenceBundle,
   copyWorkspaceManifest,
+  copyWorkspaceDryRun,
 }: ExecutionGraphPanelProps) {
   const [selectedScenarioId, setSelectedScenarioId] = useState(
     initialDemoScenarioId ?? demoScenarios?.[0]?.id ?? '',
@@ -114,6 +117,7 @@ export function ExecutionGraphPanel({
   const [auditCopyState, setAuditCopyState] = useState<'idle' | 'copied'>('idle');
   const [scenarioBundleCopyState, setScenarioBundleCopyState] = useState<'idle' | 'copied'>('idle');
   const [workspaceManifestCopyState, setWorkspaceManifestCopyState] = useState<'idle' | 'copied'>('idle');
+  const [workspaceDryRunCopyState, setWorkspaceDryRunCopyState] = useState<'idle' | 'copied'>('idle');
   const selectedScenario = useMemo(
     () => demoScenarios?.find((scenario) => scenario.id === selectedScenarioId) ?? demoScenarios?.[0],
     [demoScenarios, selectedScenarioId],
@@ -190,6 +194,10 @@ export function ExecutionGraphPanel({
     workspaceManifestTemplates,
     workspaceManifestTools,
   ]);
+  const workspaceDryRun = useMemo(() => buildWorkspaceImportExportDryRun({
+    mode: 'export',
+    manifestPreview: workspaceManifestPreview,
+  }), [workspaceManifestPreview]);
   const allowedControlActions = useMemo(
     () => (controlState ? deriveAllowedExecutionControlActions(controlState) : []),
     [controlState],
@@ -240,6 +248,10 @@ export function ExecutionGraphPanel({
   const handleCopyWorkspaceManifest = () => {
     const copy = copyWorkspaceManifest ?? ((markdown: string) => navigator.clipboard?.writeText(markdown));
     void Promise.resolve(copy(workspaceManifestPreview.markdown)).then(() => setWorkspaceManifestCopyState('copied'));
+  };
+  const handleCopyWorkspaceDryRun = () => {
+    const copy = copyWorkspaceDryRun ?? ((markdown: string) => navigator.clipboard?.writeText(markdown));
+    void Promise.resolve(copy(workspaceDryRun.markdown)).then(() => setWorkspaceDryRunCopyState('copied'));
   };
   const handleControlAction = (action: ExecutionControlAction) => {
     if (!controlState) {
@@ -636,6 +648,33 @@ export function ExecutionGraphPanel({
         </pre>
         {workspaceManifestCopyState === 'copied' ? <p className="copy-status" role="status">Copied workspace portability manifest preview.</p> : null}
       </section>
+
+      {selectedScenario ? (
+        <section className="workspace-dry-run-preview" aria-labelledby="workspace-dry-run-heading">
+          <div className="trail-heading">
+            <div>
+              <h3 id="workspace-dry-run-heading">Workspace import/export dry run</h3>
+              <div className="summary-grid trail-summary" aria-label="Workspace import/export dry-run metadata">
+                <span>{workspaceDryRun.schemaVersion}</span>
+                <span>{workspaceDryRun.mode}</span>
+                <span>{workspaceDryRun.source.mode}</span>
+                <span>{workspaceDryRun.source.workspaceId}</span>
+                <span>{workspaceDryRun.summary.acceptedFileCount} accepted {workspaceDryRun.summary.acceptedFileCount === 1 ? 'file' : 'files'}</span>
+              </div>
+            </div>
+            <button className="icon-button" type="button" onClick={handleCopyWorkspaceDryRun} aria-label="Copy workspace import/export dry run" title="Copy workspace import/export dry run">
+              <Clipboard size={18} aria-hidden="true" />
+            </button>
+          </div>
+          <pre className="run-evidence-markdown" aria-label="Workspace import/export dry-run Markdown preview">
+            {workspaceDryRun.markdown.split('\n').map((line, index) => (
+              <code key={`${index}-${line}`}>{line || ' '}</code>
+            ))}
+          </pre>
+          <p className="copy-status">{workspaceDryRun.decisionNotes[1]}</p>
+          {workspaceDryRunCopyState === 'copied' ? <p className="copy-status" role="status">Copied workspace import/export dry run.</p> : null}
+        </section>
+      ) : null}
 
       {runEvidenceExport ? (
         <div className="run-evidence-preview" aria-labelledby="run-evidence-heading">

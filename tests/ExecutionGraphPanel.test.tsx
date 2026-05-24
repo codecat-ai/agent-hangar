@@ -204,7 +204,7 @@ describe('ExecutionGraphPanel', () => {
             baseUrl: 'http://localhost:11434/v1',
             createdAt: '2026-05-23T10:00:00.000Z',
             updatedAt: '2026-05-23T10:00:00.000Z',
-            encryptedApiKey: 'local-demo:v1:sk-ui-secret',
+            encryptedApiKey: 'local-demo:v1:redaction-fixture',
           },
         ]}
         workspaceManifestModelsByProvider={{
@@ -224,7 +224,7 @@ describe('ExecutionGraphPanel', () => {
     expect(within(manifest).getByText('1 provider')).toBeInTheDocument();
     expect(within(manifest).getByText('1 unresolved escalation')).toBeInTheDocument();
     expect(within(manifest).getByText('- Source mode: source-checkout-only')).toBeInTheDocument();
-    expect(document.body.textContent).not.toMatch(/apiKey|encryptedApiKey|sk-ui-secret|encryptedKeyMaterial|Bearer/i);
+    expect(document.body.textContent).not.toMatch(/apiKey|encryptedApiKey|redaction-fixture|encryptedKeyMaterial|Bearer/i);
 
     fireEvent.click(within(manifest).getByRole('button', { name: 'Copy workspace portability manifest preview' }));
 
@@ -233,6 +233,51 @@ describe('ExecutionGraphPanel', () => {
     expect(copyWorkspaceManifest.mock.calls[0]![0]).toContain('schemaVersion: agent-hangar.workspace-manifest-preview.v1');
     expect(copyWorkspaceManifest.mock.calls[0]![0]).toContain('# Workspace Portability Manifest Preview');
     expect(copyWorkspaceManifest.mock.calls[0]![0]).not.toMatch(/apiKey|encryptedApiKey|sk-ui-secret|encryptedKeyMaterial|Bearer/i);
+  });
+
+  it('renders source-checkout import/export dry-run preview and copies the selected scenario report through an injected side effect', async () => {
+    const scenarios = listDemoWorkspaceScenarios();
+    const copyWorkspaceDryRun = vi.fn();
+
+    render(
+      <ExecutionGraphPanel
+        demoScenarios={scenarios}
+        initialDemoScenarioId="coordination-happy-path"
+        workspaceManifestProviders={[
+          {
+            id: 'local-provider-demo',
+            kind: 'openai-compatible',
+            displayName: 'Local Demo Provider',
+            baseUrl: 'http://localhost:11434/v1',
+            createdAt: '2026-05-23T10:00:00.000Z',
+            updatedAt: '2026-05-23T10:00:00.000Z',
+            encryptedApiKey: 'local-demo:v1:sk-ui-secret',
+          },
+        ]}
+        workspaceManifestModelsByProvider={{
+          'local-provider-demo': [{ id: 'local-model-planner', displayName: 'Local Planner', providerKind: 'openai-compatible' }],
+        }}
+        copyWorkspaceDryRun={copyWorkspaceDryRun}
+      />,
+    );
+
+    const dryRun = screen.getByRole('region', { name: 'Workspace import/export dry run' });
+    expect(within(dryRun).getByRole('heading', { name: 'Workspace import/export dry run' })).toBeInTheDocument();
+    expect(within(dryRun).getByText('agent-hangar.workspace-import-export-dry-run.v1')).toBeInTheDocument();
+    expect(within(dryRun).getByText('export')).toBeInTheDocument();
+    expect(within(dryRun).getByText('source-checkout-only')).toBeInTheDocument();
+    expect(within(dryRun).getByText('workspace-local-demo')).toBeInTheDocument();
+    expect(within(dryRun).getByText('- Accepted files: 3')).toBeInTheDocument();
+    expect(within(dryRun).getByText('No local provider secrets, encrypted key material, saved desktop state, or localStorage records were mutated.')).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/apiKey|encryptedApiKey|sk-ui-secret|encryptedKeyMaterial|Bearer/i);
+
+    fireEvent.click(within(dryRun).getByRole('button', { name: 'Copy workspace import/export dry run' }));
+
+    expect(copyWorkspaceDryRun).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(within(dryRun).getByRole('status')).toHaveTextContent('Copied workspace import/export dry run.'));
+    expect(copyWorkspaceDryRun.mock.calls[0]![0]).toContain('schemaVersion: agent-hangar.workspace-import-export-dry-run.v1');
+    expect(copyWorkspaceDryRun.mock.calls[0]![0]).toContain('## Export Readiness');
+    expect(copyWorkspaceDryRun.mock.calls[0]![0]).not.toMatch(/apiKey|encryptedApiKey|redaction-fixture|encryptedKeyMaterial|Bearer/i);
   });
 
   it('shows guarded controls for a working local demo node and records pause audit text', () => {
