@@ -11,6 +11,7 @@ import {
 } from './harness/providerProfileFlow';
 import { type NormalizedModel, type ProviderKind } from './harness/providerCatalog';
 import { type ProviderProfile, type ProviderProfileClock, type ProviderProfileCrypto } from './harness/providerProfiles';
+import { deriveProviderShellState } from './harness/shellStates';
 
 const providerKinds: ProviderKind[] = ['openai', 'anthropic', 'gemini', 'openai-compatible'];
 
@@ -28,6 +29,10 @@ export function ProviderProfilePanel({ crypto, clock, now, initialProfiles, mode
   const [editingId, setEditingId] = useState<string | undefined>();
   const [error, setError] = useState<string | undefined>();
   const summaries = useMemo(() => summarizeProviderProfiles(profiles, modelsByProvider, now), [profiles, modelsByProvider, now]);
+  const shellState = useMemo(
+    () => deriveProviderShellState({ profiles, modelsByProvider, now }),
+    [modelsByProvider, now, profiles],
+  );
 
   function updateDraft(field: keyof ProviderProfileDraft, value: string) {
     setDraft((current) => ({ ...current, [field]: value }));
@@ -129,7 +134,13 @@ export function ProviderProfilePanel({ crypto, clock, now, initialProfiles, mode
         {error ? <p className="form-error" role="alert">{error}</p> : null}
       </form>
 
-      <div className="profile-list">
+      <div className="shell-state-banner" role="status" aria-live="polite">
+        <strong>{shellState.label}</strong>
+        <span>{shellState.summary}</span>
+      </div>
+      <p className="shell-guidance">{shellState.guidance}</p>
+
+      <div className="profile-list" aria-label="Provider shell states">
         {summaries.length === 0 ? <p className="empty-state">No provider profiles yet.</p> : null}
         {summaries.map((summary) => {
           const profile = profiles.find((item) => item.id === summary.id);
