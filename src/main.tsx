@@ -11,6 +11,8 @@ import { type ProviderDiscoveryFixture } from './harness/providerDiscoveryDryRun
 import { type NormalizedModel } from './harness/providerCatalog';
 import { createProfileFromDraft } from './harness/providerProfileFlow';
 import { localDemoProviderProfileCrypto } from './harness/providerProfiles';
+import { evaluateProviderDiscoveryAdapterShell } from './harness/providerDiscoveryAdapterShell';
+import { buildProviderDiscoveryDryRun, summarizeDiscoveryDryRun } from './harness/providerDiscoveryDryRun';
 import { createTemplateFromPreset } from './harness/promptTemplates';
 import { deriveProviderShellState } from './harness/shellStates';
 
@@ -161,6 +163,17 @@ const demoProviderShellState = deriveProviderShellState({
   modelsByProvider: demoModelsByProvider,
   now: demoNow,
 });
+const demoDiscoveryDryRunSummary = summarizeDiscoveryDryRun(buildProviderDiscoveryDryRun({
+  profiles: demoProfiles,
+  fixturesByProvider: demoDiscoveryFixturesByProvider,
+  now: demoNow,
+  staleAfterMs: 24 * 60 * 60 * 1000,
+}));
+const demoAdapterShellResults = demoProfiles.map((profile) => evaluateProviderDiscoveryAdapterShell({
+  profile,
+  fixture: demoDiscoveryFixturesByProvider[profile.id],
+  state: { enabled: false },
+}));
 const demoRunwayBindings = [
   { agentId: 'planner', providerProfileId: 'openai-main', templateId: 'template-planner-demo' },
   { agentId: 'researcher', providerProfileId: 'local-provider-demo', templateId: 'template-local-researcher' },
@@ -198,6 +211,8 @@ function App() {
           workspaceManifestTemplates={demoTemplates}
           workspaceManifestTools={workspaceManifestTools}
           workspaceManifestEscalationPolicies={escalationPolicies}
+          providerDiscoveryDryRunSummary={demoDiscoveryDryRunSummary}
+          providerDiscoveryAdapterShellResults={demoAdapterShellResults}
         />
         <AgentRunwayPanel
           runs={runs}
