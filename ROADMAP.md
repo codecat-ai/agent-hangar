@@ -4,8 +4,8 @@
 
 - **Maturity:** `active-development`
 - **Planned cadence:** 2-4 focused sessions per week during foundation hardening.
-- **Current phase:** Foundation, provider management, deterministic provider discovery dry-run previews, provider/agent shell states, template studio, execution graph, expanded local demo scenarios, local evidence export, scenario evidence packaging, source-checkout workspace portability manifest previews, source-checkout workspace import/export dry runs, source-checkout fixture review coverage, guarded local execution controls, collaboration inbox persistence, collaboration triage filters, compact audit previews, and audit-history preview groundwork.
-- **Latest review:** The provider discovery adapter contract has been reviewed in `docs/provider-discovery-contract.md`; live discovery remains disabled by default until secure storage, operator consent, retry/cancellation, audit, and redaction behavior have fixture-backed tests.
+- **Current phase:** Foundation, provider management, deterministic provider discovery dry-run previews, disabled fixture-backed provider discovery adapter shell, provider/agent shell states, template studio, execution graph, expanded local demo scenarios, local evidence export, scenario evidence packaging, source-checkout workspace portability manifest previews, source-checkout workspace import/export dry runs, source-checkout fixture review coverage, guarded local execution controls, collaboration inbox persistence, collaboration triage filters, compact audit previews, and audit-history preview groundwork.
+- **Latest review:** The provider discovery adapter contract has been reviewed in `docs/provider-discovery-contract.md`; a disabled fixture-backed adapter shell now exercises consent, injected options, typed issues, audit, redaction, and React preview behavior while live discovery remains disabled until secure storage, cancellation, cache replacement, and live-adapter tests are complete.
 - **Category:** Local-first desktop productivity / multi-agent operations UI.
 
 Agent Hangar is a young project. It should receive active investment only while each session advances a product-shaped workflow: reproducible setup, safe provider management, prompt/template governance, task execution, observability, or usable demo evidence. Avoid adding decorative UI or narrow options before the core operator workflow is dependable.
@@ -23,6 +23,8 @@ Agent Hangar is a young project. It should receive active investment only while 
    - Deterministic provider discovery dry-run helpers now consume local provider profiles and fixture responses to produce schema-versioned previews for missing-key, ready, empty inventory, degraded/permission, stale inventory, and malformed fixture states without provider calls, network calls, shell execution, or package-registry assumptions.
    - The provider profile UI now exposes an accessible local discovery dry-run preview with status/severity guidance, model counts, capability tags, typed fixture issues, aggregate counts, and the existing secret-safe display contract.
    - The provider discovery adapter contract review is documented in `docs/provider-discovery-contract.md`, including the future live-adapter request/result shape, explicit consent requirement, bounded timeout/retry behavior, typed error handling, response minimization, audit requirements, and fixture/redaction gates.
+   - A disabled-by-default fixture-backed provider discovery adapter shell is implemented with typed blocked, missing-consent, missing-options, degraded/permission, malformed, stale, and ready results; injected request timestamps/options only; clone-safe JSON/Markdown preview output; local audit metadata; next-action guidance; and no provider, network, shell, package-registry, or Tauri calls.
+   - The provider profile UI now exposes a read-only local adapter-shell preview that remains disabled by default and renders typed blocked guidance without exposing raw API keys, bearer tokens, encrypted key material, API key references, or customer-like text.
    - Pure provider shell-state helpers now derive deterministic empty, disconnected, inventory-empty, stale, degraded/error, and ready summaries with local operator guidance.
    - Normalized model capability tags now summarize text, vision, reasoning, embeddings, fast, long-context, and tool-use support for operator decisions.
    - Preserve the secret-safe display/debug contract as Tauri secure storage and real model discovery refresh adapters are added.
@@ -61,11 +63,10 @@ Agent Hangar is a young project. It should receive active investment only while 
 
 ## Next
 
-1. **Disabled provider discovery adapter shell**
-   - Prototype a fixture-backed adapter shell against the reviewed contract without making live provider calls.
-   - Keep it disabled by default until secure storage, explicit consent, cancellation, retry, audit, cache replacement, and React redaction tests are complete.
-2. **Cadence/completion review**
+1. **Cadence/completion review**
    - Decide whether Agent Hangar should move from `active-development` to `growth` now that the main local-first operator foundations and contract review are in place.
+2. **Live discovery readiness review**
+   - Keep live discovery disabled until secure storage, cancellation, cache replacement, retry policy, and live-adapter tests satisfy the reviewed contract.
 
 ## Later
 
