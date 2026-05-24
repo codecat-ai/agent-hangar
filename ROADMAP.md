@@ -4,7 +4,7 @@
 
 - **Maturity:** `active-development`
 - **Planned cadence:** 2-4 focused sessions per week during foundation hardening.
-- **Current phase:** Foundation, provider management, deterministic provider discovery dry-run previews, provider/agent shell states, template studio, execution graph, expanded local demo scenarios, local evidence export, scenario evidence packaging, source-checkout workspace portability manifest previews, source-checkout workspace import/export dry runs, guarded local execution controls, collaboration inbox persistence, collaboration triage filters, compact audit previews, and audit-history preview groundwork.
+- **Current phase:** Foundation, provider management, deterministic provider discovery dry-run previews, provider/agent shell states, template studio, execution graph, expanded local demo scenarios, local evidence export, scenario evidence packaging, source-checkout workspace portability manifest previews, source-checkout workspace import/export dry runs, source-checkout fixture review coverage, guarded local execution controls, collaboration inbox persistence, collaboration triage filters, compact audit previews, and audit-history preview groundwork.
 - **Category:** Local-first desktop productivity / multi-agent operations UI.
 
 Agent Hangar is a young project. It should receive active investment only while each session advances a product-shaped workflow: reproducible setup, safe provider management, prompt/template governance, task execution, observability, or usable demo evidence. Avoid adding decorative UI or narrow options before the core operator workflow is dependable.
@@ -50,6 +50,7 @@ Agent Hangar is a young project. It should receive active investment only while 
    - The local demo UI now exposes a workspace portability manifest preview/copy region inside the execution graph panel with schema-versioned Markdown, source-checkout-only portability notes, deterministic ordering, and redaction for raw API keys, bearer tokens, encrypted key material, secret-looking notes, and customer-like text.
    - Pure source-checkout-only workspace import/export dry-run helpers now consume manifest preview data for export readiness, validate import candidate bundle shapes before mutation, report file-level ready/accepted/rejected/missing entries, summarize replacement/new workspace decisions, inherit manifest blockers, and state that local provider secrets, encrypted key material, saved desktop state, and localStorage records were not mutated.
    - The local demo UI now exposes a workspace import/export dry-run preview/copy region for the selected scenario inside the execution graph panel, with schema-versioned Markdown and no provider, shell, network, package-registry, or Tauri API calls.
+   - Small checked-in source-checkout fixture manifests now exercise workspace import validation examples through the existing dry-run path, with deterministic review coverage that rejects raw API keys, bearer tokens, encrypted key material, customer-like text, provider execution assumptions, and package-registry assumptions.
 5. **Operator-facing shell hardening**
    - Provider and agent panels now use test-backed shell-state derivation instead of static scaffolding.
    - Agent runway helpers now cover empty, queued, working, completed, blocked provider/template bindings, stale provider warnings, and failed/error states without real provider execution.
@@ -58,10 +59,7 @@ Agent Hangar is a young project. It should receive active investment only while 
 
 ## Next
 
-1. **Workspace import/export fixture review**
-   - Add small checked-in source-checkout fixture manifests for import validation examples once the dry-run schema settles.
-   - Keep fixtures synthetic, secret-safe, and free of package-registry or provider execution assumptions.
-2. **Provider discovery contract review**
+1. **Provider discovery contract review**
    - Draft the non-network adapter boundary that future live discovery implementations must satisfy.
    - Keep the reviewed boundary disabled by default until storage, consent, retry, and audit behavior are specified.
 

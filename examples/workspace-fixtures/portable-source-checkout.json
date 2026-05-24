@@ -1,0 +1,33 @@
+{
+  "id": "portable-source-checkout",
+  "label": "Portable source checkout",
+  "intent": "Demonstrates a minimal source checkout import candidate that validates without storage mutation.",
+  "expectedStatus": "ready",
+  "candidateBundle": {
+    "schemaVersion": "agent-hangar.workspace-export-bundle.v1",
+    "workspaceId": "fixture-workspace-portable",
+    "scenarioId": "fixture-coordination",
+    "files": [
+      {
+        "path": "agent-hangar.workspace-manifest-preview.json",
+        "kind": "manifest",
+        "sizeBytes": 1536
+      },
+      {
+        "path": "agent-hangar.workspace-import-export-dry-run.md",
+        "kind": "markdown",
+        "sizeBytes": 1024
+      },
+      {
+        "path": "evidence/fixture-coordination.run-evidence.md",
+        "kind": "evidence",
+        "sizeBytes": 2048
+      },
+      {
+        "path": "scenarios/fixture-coordination.json",
+        "kind": "scenario",
+        "sizeBytes": 4096
+      }
+    ]
+  }
+}

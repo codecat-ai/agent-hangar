@@ -1,0 +1,23 @@
+{
+  "id": "missing-manifest-source-checkout",
+  "label": "Missing manifest source checkout",
+  "intent": "Demonstrates that import dry run reports a missing workspace manifest preview before mutation.",
+  "expectedStatus": "blocked",
+  "candidateBundle": {
+    "schemaVersion": "agent-hangar.workspace-export-bundle.v1",
+    "workspaceId": "fixture-workspace-missing-manifest",
+    "scenarioId": "fixture-missing-manifest",
+    "files": [
+      {
+        "path": "agent-hangar.workspace-import-export-dry-run.md",
+        "kind": "markdown",
+        "sizeBytes": 1024
+      },
+      {
+        "path": "scenarios/fixture-missing-manifest.json",
+        "kind": "scenario",
+        "sizeBytes": 2048
+      }
+    ]
+  }
+}
