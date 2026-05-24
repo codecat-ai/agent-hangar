@@ -41,6 +41,7 @@ import {
 } from './harness/workspaceManifestPreview';
 import { buildWorkspaceImportExportDryRun } from './harness/workspaceImportExportDryRun';
 import { type EscalationPolicyRecord, type PromptTemplateRecord, type WorkspaceToolRecord } from './harness/promptTemplates';
+import { buildSourceCheckoutOnboarding } from './harness/sourceCheckoutOnboarding';
 import { buildSourceCheckoutOperatorWalkthrough } from './harness/sourceCheckoutOperatorWalkthrough';
 
 export interface ExecutionGraphPanelProps {
@@ -232,6 +233,7 @@ export function ExecutionGraphPanel({
     workspaceManifestPreview,
     workspaceManifestProviders?.length,
   ]);
+  const sourceCheckoutOnboarding = useMemo(() => buildSourceCheckoutOnboarding(), []);
   const allowedControlActions = useMemo(
     () => (controlState ? deriveAllowedExecutionControlActions(controlState) : []),
     [controlState],
@@ -371,6 +373,49 @@ export function ExecutionGraphPanel({
           {selectedScenario ? <p>{selectedScenario.description}</p> : null}
         </div>
       ) : null}
+
+      <section className="source-checkout-onboarding" aria-labelledby="source-checkout-onboarding-heading">
+        <div className="trail-heading">
+          <div>
+            <h3 id="source-checkout-onboarding-heading">Source-checkout onboarding</h3>
+            <div className="summary-grid trail-summary" aria-label="Source-checkout onboarding metadata">
+              <span>{sourceCheckoutOnboarding.schemaVersion}</span>
+              <span>{sourceCheckoutOnboarding.source.mode}</span>
+              <span>{sourceCheckoutOnboarding.summary.status}</span>
+              <span>{sourceCheckoutOnboarding.summary.regionCount} regions</span>
+            </div>
+          </div>
+        </div>
+        <div className="control-audit-preview">
+          <strong>{sourceCheckoutOnboarding.primaryWalkthrough.heading}</strong>
+          <strong>Keyboard start</strong>
+          <p>{sourceCheckoutOnboarding.primaryWalkthrough.keyboardStart}</p>
+          <p role="status">
+            {sourceCheckoutOnboarding.summary.status === 'ready'
+              ? 'Source-checkout onboarding ready.'
+              : `Source-checkout onboarding has ${sourceCheckoutOnboarding.summary.warningCount} warnings.`}
+          </p>
+        </div>
+        <ul className="issue-list" aria-label="Source-checkout setup notes">
+          {sourceCheckoutOnboarding.setupNotes.map((note) => <li key={note}>{note}</li>)}
+        </ul>
+        <nav aria-label="Source-checkout evidence links">
+          <ul className="tag-row">
+            {sourceCheckoutOnboarding.keyboard.order
+              .filter((region) => region.id !== 'source-checkout-onboarding')
+              .map((region) => (
+                <li className="tag" key={region.id}>
+                  <a href={`#${region.targetId}`}>{region.label}</a>
+                </li>
+              ))}
+          </ul>
+        </nav>
+        {sourceCheckoutOnboarding.nextActions.length > 0 ? (
+          <ul className="issue-list" aria-label="Source-checkout onboarding next actions">
+            {sourceCheckoutOnboarding.nextActions.map((action) => <li key={action}>{action}</li>)}
+          </ul>
+        ) : null}
+      </section>
 
       <div className="summary-grid graph-summary" aria-label="Execution graph summary">
         <span>{summary.nodeCount} {summary.nodeCount === 1 ? 'node' : 'nodes'}</span>
