@@ -4,7 +4,7 @@
 
 - **Maturity:** `active-development`
 - **Planned cadence:** 2-4 focused sessions per week during foundation hardening.
-- **Current phase:** Foundation, provider management, template studio, execution graph, expanded local demo scenarios, local evidence export, scenario evidence packaging, guarded local execution controls, collaboration inbox persistence, collaboration triage filters, compact audit previews, and audit-history preview groundwork.
+- **Current phase:** Foundation, provider management, template studio, execution graph, expanded local demo scenarios, local evidence export, scenario evidence packaging, source-checkout workspace portability manifest previews, guarded local execution controls, collaboration inbox persistence, collaboration triage filters, compact audit previews, and audit-history preview groundwork.
 - **Category:** Local-first desktop productivity / multi-agent operations UI.
 
 Agent Hangar is a young project. It should receive active investment only while each session advances a product-shaped workflow: reproducible setup, safe provider management, prompt/template governance, task execution, observability, or usable demo evidence. Avoid adding decorative UI or narrow options before the core operator workflow is dependable.
@@ -43,21 +43,23 @@ Agent Hangar is a young project. It should receive active investment only while 
    - The local demo UI now shows an accessible scenario selector, compact demo workspace summaries, deterministic collaboration triage controls, collaboration inbox counts, visible/hidden filter counts, unresolved items, relevant acknowledge/resolve controls, localStorage persistence with safe fallback, mutation status text, filtered sanitized audit history, next-action hints, and copyable Markdown preview data inside the execution graph panel.
    - Pure scenario evidence bundle helpers now reuse run evidence export, audit-history preview, and collaboration triage summaries to produce schema-versioned local-only bundle preview data and Markdown with deterministic ordering, validation for malformed or unsupported bundle inputs, recent audit entries, issue summaries, unresolved escalation/high-priority counts, and redaction for API-key-looking values, encrypted key material, bearer tokens, secret-looking notes, and customer-like text.
    - The local demo UI now exposes a scenario evidence bundle preview/copy region inside the execution graph panel, using the selected local scenario and active collaboration/audit summaries without provider calls, network calls, or external commands.
+   - Pure workspace portability manifest preview helpers now summarize source-checkout-only provider binding/inventory status, prompt template validation reports, selected demo scenario identity, execution graph/trail/evidence availability, collaboration/audit portability notes, and blockers for missing provider bindings, missing/disabled tools, unresolved escalations, high-priority collaboration items, graph validation issues, and malformed or unsupported manifest input.
+   - The local demo UI now exposes a workspace portability manifest preview/copy region inside the execution graph panel with schema-versioned Markdown, source-checkout-only portability notes, deterministic ordering, and redaction for raw API keys, bearer tokens, encrypted key material, secret-looking notes, and customer-like text.
 5. **Operator-facing shell hardening**
    - Turn provider and agent panels from static scaffolding into test-backed UI states.
    - Add empty, loading, error, and disconnected states before introducing long-running execution.
 
 ## Next
 
-1. **Workspace portability**
-   - Reuse template validation reports in source-checkout workspace import/export flows.
-   - Keep portability manifests and bundle previews free of raw provider API keys, bearer tokens, and encrypted key material.
+1. **Workspace import/export dry run**
+   - Add a source-checkout-only import/export dry-run flow that consumes manifest preview data, reports file-level readiness, and still avoids package-registry or live provider assumptions.
+   - Keep dry-run manifests and bundle previews free of raw provider API keys, bearer tokens, encrypted key material, customer-like text, and real command output.
 2. **Provider and agent shell states**
    - Add empty, disconnected, stale, and error states to provider and agent panels before real provider execution is introduced.
    - Keep every state source-checkout friendly and avoid implying live model calls.
-3. **Portable workspace manifest previews**
-   - Add source-checkout-only workspace manifest previews that summarize templates, provider bindings, scenarios, and portability blockers without packaging or registry assumptions.
-   - Reuse existing validation reports and evidence bundle redaction rules so manifests stay deterministic, local-only, and provider-free.
+3. **Provider discovery dry-run adapters**
+   - Add deterministic adapter contracts and fixture-backed discovery previews for provider/model refresh states before any live provider call path is enabled.
+   - Surface stale, degraded, permission, and missing-key states in the shell with the same secret-safe display contract.
 
 ## Later
 

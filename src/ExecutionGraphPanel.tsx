@@ -31,6 +31,13 @@ import { replayExecutionTrail, type ExecutionTrailSummary } from './harness/exec
 import { type DemoWorkspaceScenario } from './harness/demoWorkspace';
 import { formatRunEvidenceExport } from './harness/runEvidenceExport';
 import { formatScenarioEvidenceBundle } from './harness/scenarioEvidenceBundle';
+import { type NormalizedModel } from './harness/providerCatalog';
+import { type ProviderProfile } from './harness/providerProfiles';
+import {
+  buildWorkspaceManifestPreview,
+  type WorkspaceManifestPreview,
+} from './harness/workspaceManifestPreview';
+import { type EscalationPolicyRecord, type PromptTemplateRecord, type WorkspaceToolRecord } from './harness/promptTemplates';
 
 export interface ExecutionGraphPanelProps {
   graph?: ExecutionGraph;
@@ -43,9 +50,15 @@ export interface ExecutionGraphPanelProps {
   collaborationClock?: () => string;
   collaborationStorage?: CollaborationStorage;
   secretPreview?: string;
+  workspaceManifestProviders?: ProviderProfile[];
+  workspaceManifestModelsByProvider?: Record<string, NormalizedModel[]>;
+  workspaceManifestTemplates?: PromptTemplateRecord[];
+  workspaceManifestTools?: WorkspaceToolRecord[];
+  workspaceManifestEscalationPolicies?: EscalationPolicyRecord[];
   copyRunEvidence?: (markdown: string) => void | Promise<void>;
   copyAuditHistory?: (markdown: string) => void | Promise<void>;
   copyScenarioEvidenceBundle?: (markdown: string) => void | Promise<void>;
+  copyWorkspaceManifest?: (markdown: string) => void | Promise<void>;
 }
 
 interface CollaborationStorage {
@@ -84,9 +97,15 @@ export function ExecutionGraphPanel({
   collaborationActorId = 'operator-local-demo',
   collaborationClock = () => '2026-05-23T10:08:00.000Z',
   collaborationStorage,
+  workspaceManifestProviders,
+  workspaceManifestModelsByProvider,
+  workspaceManifestTemplates,
+  workspaceManifestTools,
+  workspaceManifestEscalationPolicies,
   copyRunEvidence,
   copyAuditHistory,
   copyScenarioEvidenceBundle,
+  copyWorkspaceManifest,
 }: ExecutionGraphPanelProps) {
   const [selectedScenarioId, setSelectedScenarioId] = useState(
     initialDemoScenarioId ?? demoScenarios?.[0]?.id ?? '',
@@ -94,6 +113,7 @@ export function ExecutionGraphPanel({
   const [copyState, setCopyState] = useState<'idle' | 'copied'>('idle');
   const [auditCopyState, setAuditCopyState] = useState<'idle' | 'copied'>('idle');
   const [scenarioBundleCopyState, setScenarioBundleCopyState] = useState<'idle' | 'copied'>('idle');
+  const [workspaceManifestCopyState, setWorkspaceManifestCopyState] = useState<'idle' | 'copied'>('idle');
   const selectedScenario = useMemo(
     () => demoScenarios?.find((scenario) => scenario.id === selectedScenarioId) ?? demoScenarios?.[0],
     [demoScenarios, selectedScenarioId],
@@ -150,6 +170,26 @@ export function ExecutionGraphPanel({
       })
       : undefined
   ), [auditHistoryPreview, collaborationTriage, selectedScenario]);
+  const workspaceManifestPreview = useMemo(() => buildWorkspaceManifestPreview({
+    workspaceId: graph.workspaceId,
+    providerProfiles: workspaceManifestProviders,
+    modelsByProvider: workspaceManifestModelsByProvider,
+    promptTemplates: workspaceManifestTemplates,
+    workspaceTools: workspaceManifestTools,
+    escalationPolicies: workspaceManifestEscalationPolicies,
+    scenario: selectedScenario,
+    graph,
+    collaborationItems: sortedCollaborationItems,
+  }), [
+    graph,
+    selectedScenario,
+    sortedCollaborationItems,
+    workspaceManifestEscalationPolicies,
+    workspaceManifestModelsByProvider,
+    workspaceManifestProviders,
+    workspaceManifestTemplates,
+    workspaceManifestTools,
+  ]);
   const allowedControlActions = useMemo(
     () => (controlState ? deriveAllowedExecutionControlActions(controlState) : []),
     [controlState],
@@ -196,6 +236,10 @@ export function ExecutionGraphPanel({
     }
     const copy = copyScenarioEvidenceBundle ?? ((markdown: string) => navigator.clipboard?.writeText(markdown));
     void Promise.resolve(copy(scenarioEvidenceBundle.markdown)).then(() => setScenarioBundleCopyState('copied'));
+  };
+  const handleCopyWorkspaceManifest = () => {
+    const copy = copyWorkspaceManifest ?? ((markdown: string) => navigator.clipboard?.writeText(markdown));
+    void Promise.resolve(copy(workspaceManifestPreview.markdown)).then(() => setWorkspaceManifestCopyState('copied'));
   };
   const handleControlAction = (action: ExecutionControlAction) => {
     if (!controlState) {
@@ -564,6 +608,35 @@ export function ExecutionGraphPanel({
         </section>
       ) : null}
 
+      <section className="workspace-manifest-preview" aria-labelledby="workspace-manifest-heading">
+        <div className="trail-heading">
+          <div>
+            <h3 id="workspace-manifest-heading">Workspace portability manifest preview</h3>
+            <div className="summary-grid trail-summary" aria-label="Workspace portability manifest metadata">
+              <span>{workspaceManifestPreview.schemaVersion}</span>
+              <span>{workspaceManifestPreview.source.mode}</span>
+              <span>{workspaceManifestPreview.summary.status}</span>
+              <span>{workspaceManifestPreview.providers.total} {workspaceManifestPreview.providers.total === 1 ? 'provider' : 'providers'}</span>
+              <span>{workspaceManifestPreview.collaboration.unresolvedEscalationCount} unresolved {workspaceManifestPreview.collaboration.unresolvedEscalationCount === 1 ? 'escalation' : 'escalations'}</span>
+            </div>
+          </div>
+          <button className="icon-button" type="button" onClick={handleCopyWorkspaceManifest} aria-label="Copy workspace portability manifest preview" title="Copy workspace portability manifest preview">
+            <Clipboard size={18} aria-hidden="true" />
+          </button>
+        </div>
+        {workspaceManifestPreview.blockers.length > 0 ? (
+          <ul className="issue-list" aria-label="Workspace portability blockers">
+            {workspaceManifestPreview.blockers.slice(0, 4).map(renderWorkspaceManifestBlocker)}
+          </ul>
+        ) : null}
+        <pre className="run-evidence-markdown" aria-label="Workspace portability manifest Markdown preview">
+          {workspaceManifestPreview.markdown.split('\n').map((line, index) => (
+            <code key={`${index}-${line}`}>{line || ' '}</code>
+          ))}
+        </pre>
+        {workspaceManifestCopyState === 'copied' ? <p className="copy-status" role="status">Copied workspace portability manifest preview.</p> : null}
+      </section>
+
       {runEvidenceExport ? (
         <div className="run-evidence-preview" aria-labelledby="run-evidence-heading">
           <div className="trail-heading">
@@ -617,6 +690,10 @@ function createInitialControlState(
 
 function toControlStatus(status: ExecutionNodeStatus): ExecutionControlStatus {
   return status;
+}
+
+function renderWorkspaceManifestBlocker(blocker: WorkspaceManifestPreview['blockers'][number]) {
+  return <li key={`${blocker.code}-${blocker.source}-${blocker.message}`}>{blocker.message}</li>;
 }
 
 function formatActionLabel(action: ExecutionControlAction): string {
