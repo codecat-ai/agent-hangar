@@ -2,10 +2,10 @@
 
 ## Maturity and cadence
 
-- **Maturity:** `active-development`
-- **Planned cadence:** 2-4 focused sessions per week during foundation hardening.
-- **Current phase:** Foundation, provider management, deterministic provider discovery dry-run previews, disabled fixture-backed provider discovery adapter shell, provider/agent shell states, template studio, execution graph, expanded local demo scenarios, local evidence export, scenario evidence packaging, source-checkout workspace portability manifest previews, source-checkout workspace import/export dry runs, source-checkout fixture review coverage, guarded local execution controls, collaboration inbox persistence, collaboration triage filters, compact audit previews, and audit-history preview groundwork.
-- **Latest review:** The provider discovery adapter contract has been reviewed in `docs/provider-discovery-contract.md`; a disabled fixture-backed adapter shell now exercises consent, injected options, typed issues, audit, redaction, and React preview behavior while live discovery remains disabled until secure storage, cancellation, cache replacement, and live-adapter tests are complete.
+- **Maturity:** `growth`
+- **Planned cadence:** 1-2 focused sessions per week while the source-checkout operator workflow is hardened into a coherent, demonstrable desktop flow.
+- **Current phase:** Growth hardening after the foundation completion review: connect existing local-first provider, template, execution, collaboration, audit, scenario, portability, and fixture-review surfaces into a clearer operator walkthrough before adding live provider execution.
+- **Latest review:** The 2026-05-25 completion review found that Agent Hangar has a coherent source-checkout foundation for secret-safe provider profiles, prompt/template governance, deterministic execution previews, collaboration/audit evidence, scenario bundles, workspace portability previews, dry-run import/export, fixture review, provider/agent shell states, and a disabled fixture-backed provider discovery adapter. Cadence is lowered from `active-development` to `growth`; the next phase should emphasize onboarding clarity, accessibility, and review gates before any live discovery or packaging work.
 - **Category:** Local-first desktop productivity / multi-agent operations UI.
 
 Agent Hangar is a young project. It should receive active investment only while each session advances a product-shaped workflow: reproducible setup, safe provider management, prompt/template governance, task execution, observability, or usable demo evidence. Avoid adding decorative UI or narrow options before the core operator workflow is dependable.
@@ -63,9 +63,12 @@ Agent Hangar is a young project. It should receive active investment only while 
 
 ## Next
 
-1. **Cadence/completion review**
-   - Decide whether Agent Hangar should move from `active-development` to `growth` now that the main local-first operator foundations and contract review are in place.
-2. **Live discovery readiness review**
+1. **Guided source-checkout operator walkthrough**
+   - Add a deterministic in-app walkthrough/checklist that connects provider profiles, template validation, demo scenarios, execution evidence, collaboration triage, workspace portability, and import/export dry runs into one reviewable local operator path.
+   - Keep the walkthrough provider-free and package-registry-free until a real release path exists.
+2. **Accessibility and onboarding hardening**
+   - Review keyboard order, named regions, status text, and source-checkout setup notes across the main provider, template, execution, collaboration, and portability panels.
+3. **Live discovery readiness review**
    - Keep live discovery disabled until secure storage, cancellation, cache replacement, retry policy, and live-adapter tests satisfy the reviewed contract.
 
 ## Later
@@ -92,10 +95,12 @@ Treat these as higher priority than routine feature growth:
 
 ## Cadence-review notes
 
-Review cadence after the provider-management foundation and first demo workspace are complete.
+The 2026-05-25 completion review moved Agent Hangar from `active-development` to `growth` because the local-first foundation is now broad enough to support an operator walkthrough: reproducible source-checkout setup, secret-safe provider profiles, provider discovery dry runs, a disabled adapter shell with contract gates, template CRUD and validation, deterministic execution/collaboration/audit previews, scenario bundles, workspace portability manifests, import/export dry runs, and fixture-review coverage.
 
-- If Agent Hangar has a working source-checkout desktop flow, encrypted provider profiles, provider profile UI, model discovery refresh, template CRUD, execution graph previews, and a useful demo workspace, consider moving from `active-development` to `growth`.
-- If setup remains fragile or the project does not yet offer a usable operator workflow after several sessions, pause new feature work and focus only on reproducibility and onboarding.
+Continue growth only while work connects those foundations into a clearer operator workflow. If future sessions mostly add narrow options without improving onboarding, accessibility, safety review, or demonstrable multi-agent operations value, lower cadence to `maintenance` and shift capacity to other active/growth projects or a carefully selected non-checker project.
+
+- If a live discovery adapter is attempted, require secure storage, cancellation, cache replacement, retry policy, fixture-backed tests, and the reviewed contract before enabling provider calls.
+- If setup remains fragile or the project does not yet offer a usable operator workflow after several growth sessions, pause feature work and focus only on reproducibility and onboarding.
 - If a future desktop package or public release is prepared, verify install instructions against the actual artifact before documenting them.
 
 ## Completion-review rule
