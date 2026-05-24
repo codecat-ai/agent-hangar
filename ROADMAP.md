@@ -4,7 +4,7 @@
 
 - **Maturity:** `growth`
 - **Planned cadence:** 1-2 focused sessions per week while the source-checkout operator workflow is hardened into a coherent, demonstrable desktop flow.
-- **Current phase:** Growth hardening after the foundation completion review: connect existing local-first provider, template, execution, collaboration, audit, scenario, portability, and fixture-review surfaces into a clearer operator walkthrough before adding live provider execution.
+- **Current phase:** Growth hardening after the foundation completion review: harden accessibility, onboarding, and review gates around the connected source-checkout operator walkthrough before adding live provider execution.
 - **Latest review:** The 2026-05-25 completion review found that Agent Hangar has a coherent source-checkout foundation for secret-safe provider profiles, prompt/template governance, deterministic execution previews, collaboration/audit evidence, scenario bundles, workspace portability previews, dry-run import/export, fixture review, provider/agent shell states, and a disabled fixture-backed provider discovery adapter. Cadence is lowered from `active-development` to `growth`; the next phase should emphasize onboarding clarity, accessibility, and review gates before any live discovery or packaging work.
 - **Category:** Local-first desktop productivity / multi-agent operations UI.
 
@@ -60,15 +60,17 @@ Agent Hangar is a young project. It should receive active investment only while 
    - Agent runway helpers now cover empty, queued, working, completed, blocked provider/template bindings, stale provider warnings, and failed/error states without real provider execution.
    - React provider and agent panels now show accessible local guidance/status regions and redact raw API keys, bearer tokens, encrypted key material, and customer-like text.
    - Keep these shell states local/demo-only until real provider discovery adapters have their own reviewed contracts and fixture-backed tests.
+6. **Guided source-checkout operator walkthrough**
+   - A deterministic pure TypeScript walkthrough/checklist helper now connects provider profiles, provider discovery dry-run summaries, the disabled adapter-shell gate, template validation, selected demo scenarios, execution evidence, collaboration triage/audit, workspace portability manifests, and import/export dry runs into one schema-versioned local operator path.
+   - The walkthrough exposes clone-safe step ids, labels, statuses, severities, blockers, next actions, summary counts, and copy-ready Markdown while remaining provider-free, network-free, shell-free, package-registry-free, Tauri-free, and secret-safe.
+   - The execution graph panel now includes an accessible source-checkout operator walkthrough region with summary counts, checklist rows, next actions, and an injected copy adapter for Markdown previews.
 
 ## Next
 
-1. **Guided source-checkout operator walkthrough**
-   - Add a deterministic in-app walkthrough/checklist that connects provider profiles, template validation, demo scenarios, execution evidence, collaboration triage, workspace portability, and import/export dry runs into one reviewable local operator path.
-   - Keep the walkthrough provider-free and package-registry-free until a real release path exists.
-2. **Accessibility and onboarding hardening**
+1. **Accessibility and onboarding hardening**
    - Review keyboard order, named regions, status text, and source-checkout setup notes across the main provider, template, execution, collaboration, and portability panels.
-3. **Live discovery readiness review**
+   - Make the guided walkthrough the primary source-checkout review path without hiding the underlying provider/template/execution evidence.
+2. **Live discovery readiness review**
    - Keep live discovery disabled until secure storage, cancellation, cache replacement, retry policy, and live-adapter tests satisfy the reviewed contract.
 
 ## Later

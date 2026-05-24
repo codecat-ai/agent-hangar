@@ -280,6 +280,50 @@ describe('ExecutionGraphPanel', () => {
     expect(copyWorkspaceDryRun.mock.calls[0]![0]).not.toMatch(/apiKey|encryptedApiKey|redaction-fixture|encryptedKeyMaterial|Bearer/i);
   });
 
+  it('renders a guided source-checkout walkthrough region and copies Markdown through an injected side effect', async () => {
+    const scenarios = listDemoWorkspaceScenarios();
+    const copySourceCheckoutWalkthrough = vi.fn();
+
+    render(
+      <ExecutionGraphPanel
+        demoScenarios={scenarios}
+        initialDemoScenarioId="blocked-failure-recovery"
+        workspaceManifestProviders={[
+          {
+            id: 'local-provider-demo',
+            kind: 'openai-compatible',
+            displayName: 'Local Demo Provider',
+            baseUrl: 'http://localhost:11434/v1',
+            createdAt: '2026-05-23T10:00:00.000Z',
+            updatedAt: '2026-05-23T10:00:00.000Z',
+            encryptedApiKey: 'local-demo:v1:sk-ui-secret',
+          },
+        ]}
+        copySourceCheckoutWalkthrough={copySourceCheckoutWalkthrough}
+      />,
+    );
+
+    const walkthrough = screen.getByRole('region', { name: 'Source-checkout operator walkthrough' });
+    expect(within(walkthrough).getByRole('heading', { name: 'Source-checkout operator walkthrough' })).toBeInTheDocument();
+    expect(within(walkthrough).getByText('agent-hangar.source-checkout-operator-walkthrough.v1')).toBeInTheDocument();
+    expect(within(walkthrough).getByText('source-checkout-only')).toBeInTheDocument();
+    expect(within(walkthrough).getByText('7 steps')).toBeInTheDocument();
+    expect(within(walkthrough).getByText('Provider profiles and discovery gate')).toBeInTheDocument();
+    expect(within(walkthrough).getByText('Workspace portability manifest')).toBeInTheDocument();
+    expect(within(walkthrough).getByText('Import/export dry run')).toBeInTheDocument();
+    expect(within(walkthrough).getByText('Add local discovery dry-run preview data before treating provider readiness as reviewed.')).toBeInTheDocument();
+    expect(within(walkthrough).getByText('- Source mode: source-checkout-only')).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/apiKey|encryptedApiKey|sk-ui-secret|encryptedKeyMaterial|Bearer|\bnpm\s+(?:install|ci|run|exec)\b/i);
+
+    fireEvent.click(within(walkthrough).getByRole('button', { name: 'Copy source-checkout operator walkthrough' }));
+
+    expect(copySourceCheckoutWalkthrough).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(within(walkthrough).getByRole('status')).toHaveTextContent('Copied source-checkout operator walkthrough.'));
+    expect(copySourceCheckoutWalkthrough.mock.calls[0]![0]).toContain('schemaVersion: agent-hangar.source-checkout-operator-walkthrough.v1');
+    expect(copySourceCheckoutWalkthrough.mock.calls[0]![0]).toContain('## Steps');
+    expect(copySourceCheckoutWalkthrough.mock.calls[0]![0]).not.toMatch(/apiKey|encryptedApiKey|sk-ui-secret|encryptedKeyMaterial|Bearer/i);
+  });
+
   it('shows guarded controls for a working local demo node and records pause audit text', () => {
     const { graph, trail } = buildDemoExecutionTrail();
     graph.nodes[1] = { ...graph.nodes[1]!, status: 'working' };

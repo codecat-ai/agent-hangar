@@ -32,6 +32,8 @@ import { type DemoWorkspaceScenario } from './harness/demoWorkspace';
 import { formatRunEvidenceExport } from './harness/runEvidenceExport';
 import { formatScenarioEvidenceBundle } from './harness/scenarioEvidenceBundle';
 import { type NormalizedModel } from './harness/providerCatalog';
+import { type ProviderDiscoveryAdapterShellResult } from './harness/providerDiscoveryAdapterShell';
+import { type ProviderDiscoveryDryRunSummary } from './harness/providerDiscoveryDryRun';
 import { type ProviderProfile } from './harness/providerProfiles';
 import {
   buildWorkspaceManifestPreview,
@@ -39,6 +41,7 @@ import {
 } from './harness/workspaceManifestPreview';
 import { buildWorkspaceImportExportDryRun } from './harness/workspaceImportExportDryRun';
 import { type EscalationPolicyRecord, type PromptTemplateRecord, type WorkspaceToolRecord } from './harness/promptTemplates';
+import { buildSourceCheckoutOperatorWalkthrough } from './harness/sourceCheckoutOperatorWalkthrough';
 
 export interface ExecutionGraphPanelProps {
   graph?: ExecutionGraph;
@@ -56,11 +59,14 @@ export interface ExecutionGraphPanelProps {
   workspaceManifestTemplates?: PromptTemplateRecord[];
   workspaceManifestTools?: WorkspaceToolRecord[];
   workspaceManifestEscalationPolicies?: EscalationPolicyRecord[];
+  providerDiscoveryDryRunSummary?: ProviderDiscoveryDryRunSummary;
+  providerDiscoveryAdapterShellResults?: ProviderDiscoveryAdapterShellResult[];
   copyRunEvidence?: (markdown: string) => void | Promise<void>;
   copyAuditHistory?: (markdown: string) => void | Promise<void>;
   copyScenarioEvidenceBundle?: (markdown: string) => void | Promise<void>;
   copyWorkspaceManifest?: (markdown: string) => void | Promise<void>;
   copyWorkspaceDryRun?: (markdown: string) => void | Promise<void>;
+  copySourceCheckoutWalkthrough?: (markdown: string) => void | Promise<void>;
 }
 
 interface CollaborationStorage {
@@ -104,11 +110,14 @@ export function ExecutionGraphPanel({
   workspaceManifestTemplates,
   workspaceManifestTools,
   workspaceManifestEscalationPolicies,
+  providerDiscoveryDryRunSummary,
+  providerDiscoveryAdapterShellResults,
   copyRunEvidence,
   copyAuditHistory,
   copyScenarioEvidenceBundle,
   copyWorkspaceManifest,
   copyWorkspaceDryRun,
+  copySourceCheckoutWalkthrough,
 }: ExecutionGraphPanelProps) {
   const [selectedScenarioId, setSelectedScenarioId] = useState(
     initialDemoScenarioId ?? demoScenarios?.[0]?.id ?? '',
@@ -118,6 +127,7 @@ export function ExecutionGraphPanel({
   const [scenarioBundleCopyState, setScenarioBundleCopyState] = useState<'idle' | 'copied'>('idle');
   const [workspaceManifestCopyState, setWorkspaceManifestCopyState] = useState<'idle' | 'copied'>('idle');
   const [workspaceDryRunCopyState, setWorkspaceDryRunCopyState] = useState<'idle' | 'copied'>('idle');
+  const [walkthroughCopyState, setWalkthroughCopyState] = useState<'idle' | 'copied'>('idle');
   const selectedScenario = useMemo(
     () => demoScenarios?.find((scenario) => scenario.id === selectedScenarioId) ?? demoScenarios?.[0],
     [demoScenarios, selectedScenarioId],
@@ -198,6 +208,30 @@ export function ExecutionGraphPanel({
     mode: 'export',
     manifestPreview: workspaceManifestPreview,
   }), [workspaceManifestPreview]);
+  const sourceCheckoutWalkthrough = useMemo(() => buildSourceCheckoutOperatorWalkthrough({
+    scenario: selectedScenario,
+    providerProfileCount: workspaceManifestProviders?.length ?? workspaceManifestPreview.providers.total,
+    discoveryDryRunSummary: providerDiscoveryDryRunSummary,
+    adapterShellResults: providerDiscoveryAdapterShellResults,
+    templateReports: workspaceManifestPreview.templates.reports,
+    runEvidence: runEvidenceExport,
+    scenarioEvidenceBundle,
+    collaborationTriage,
+    auditHistoryPreview,
+    workspaceManifestPreview,
+    workspaceDryRun,
+  }), [
+    auditHistoryPreview,
+    collaborationTriage,
+    providerDiscoveryAdapterShellResults,
+    providerDiscoveryDryRunSummary,
+    runEvidenceExport,
+    scenarioEvidenceBundle,
+    selectedScenario,
+    workspaceDryRun,
+    workspaceManifestPreview,
+    workspaceManifestProviders?.length,
+  ]);
   const allowedControlActions = useMemo(
     () => (controlState ? deriveAllowedExecutionControlActions(controlState) : []),
     [controlState],
@@ -252,6 +286,10 @@ export function ExecutionGraphPanel({
   const handleCopyWorkspaceDryRun = () => {
     const copy = copyWorkspaceDryRun ?? ((markdown: string) => navigator.clipboard?.writeText(markdown));
     void Promise.resolve(copy(workspaceDryRun.markdown)).then(() => setWorkspaceDryRunCopyState('copied'));
+  };
+  const handleCopySourceCheckoutWalkthrough = () => {
+    const copy = copySourceCheckoutWalkthrough ?? ((markdown: string) => navigator.clipboard?.writeText(markdown));
+    void Promise.resolve(copy(sourceCheckoutWalkthrough.markdown)).then(() => setWalkthroughCopyState('copied'));
   };
   const handleControlAction = (action: ExecutionControlAction) => {
     if (!controlState) {
@@ -619,6 +657,47 @@ export function ExecutionGraphPanel({
           {scenarioBundleCopyState === 'copied' ? <p className="copy-status" role="status">Copied scenario evidence bundle.</p> : null}
         </section>
       ) : null}
+
+      <section className="source-checkout-walkthrough-preview" aria-labelledby="source-checkout-walkthrough-heading">
+        <div className="trail-heading">
+          <div>
+            <h3 id="source-checkout-walkthrough-heading">Source-checkout operator walkthrough</h3>
+            <div className="summary-grid trail-summary" aria-label="Source-checkout operator walkthrough metadata">
+              <span>{sourceCheckoutWalkthrough.schemaVersion}</span>
+              <span>{sourceCheckoutWalkthrough.source.mode}</span>
+              <span>{sourceCheckoutWalkthrough.summary.status}</span>
+              <span>{sourceCheckoutWalkthrough.summary.stepCount} steps</span>
+              <span>{sourceCheckoutWalkthrough.summary.blockerCount} blockers</span>
+            </div>
+          </div>
+          <button className="icon-button" type="button" onClick={handleCopySourceCheckoutWalkthrough} aria-label="Copy source-checkout operator walkthrough" title="Copy source-checkout operator walkthrough">
+            <Clipboard size={18} aria-hidden="true" />
+          </button>
+        </div>
+        <ol className="trail-list" aria-label="Source-checkout walkthrough checklist">
+          {sourceCheckoutWalkthrough.steps.map((step) => (
+            <li key={step.id}>
+              <time>{step.status}</time>
+              <div>
+                <strong>{step.label}</strong>
+                <small>{step.id} · {step.severity}</small>
+                <p>{step.summary}</p>
+              </div>
+            </li>
+          ))}
+        </ol>
+        {sourceCheckoutWalkthrough.nextActions.length > 0 ? (
+          <ul className="issue-list" aria-label="Source-checkout walkthrough next actions">
+            {sourceCheckoutWalkthrough.nextActions.slice(0, 5).map((action) => <li key={action}>{action}</li>)}
+          </ul>
+        ) : null}
+        <pre className="run-evidence-markdown" aria-label="Source-checkout walkthrough Markdown preview">
+          {sourceCheckoutWalkthrough.markdown.split('\n').map((line, index) => (
+            <code key={`${index}-${line}`}>{line || ' '}</code>
+          ))}
+        </pre>
+        {walkthroughCopyState === 'copied' ? <p className="copy-status" role="status">Copied source-checkout operator walkthrough.</p> : null}
+      </section>
 
       <section className="workspace-manifest-preview" aria-labelledby="workspace-manifest-heading">
         <div className="trail-heading">
