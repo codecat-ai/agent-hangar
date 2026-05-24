@@ -4,7 +4,7 @@
 
 - **Maturity:** `active-development`
 - **Planned cadence:** 2-4 focused sessions per week during foundation hardening.
-- **Current phase:** Foundation, provider management, template studio, execution graph, expanded local demo scenarios, local evidence export, guarded local execution controls, collaboration inbox persistence, collaboration triage filters, compact audit previews, and audit-history preview groundwork.
+- **Current phase:** Foundation, provider management, template studio, execution graph, expanded local demo scenarios, local evidence export, scenario evidence packaging, guarded local execution controls, collaboration inbox persistence, collaboration triage filters, compact audit previews, and audit-history preview groundwork.
 - **Category:** Local-first desktop productivity / multi-agent operations UI.
 
 Agent Hangar is a young project. It should receive active investment only while each session advances a product-shaped workflow: reproducible setup, safe provider management, prompt/template governance, task execution, observability, or usable demo evidence. Avoid adding decorative UI or narrow options before the core operator workflow is dependable.
@@ -41,6 +41,8 @@ Agent Hangar is a young project. It should receive active investment only while 
    - Pure collaboration mutation helpers now acknowledge and resolve inbox items by id, reject unknown ids and invalid resolved-item transitions with typed issues, keep clone-safe sorted records, append schema-versioned sanitized mutation audit entries with injected clock/actor values, and return schema-versioned local persistence payloads with sanitized audit-history previews.
    - Pure collaboration triage helpers now filter sanitized local demo rows by status, high priority, type, and text across title/body/next-action hints; return compact visible/hidden/active-filter summaries; and count high-priority unresolved items plus unresolved escalations without exposing secret-looking content.
    - The local demo UI now shows an accessible scenario selector, compact demo workspace summaries, deterministic collaboration triage controls, collaboration inbox counts, visible/hidden filter counts, unresolved items, relevant acknowledge/resolve controls, localStorage persistence with safe fallback, mutation status text, filtered sanitized audit history, next-action hints, and copyable Markdown preview data inside the execution graph panel.
+   - Pure scenario evidence bundle helpers now reuse run evidence export, audit-history preview, and collaboration triage summaries to produce schema-versioned local-only bundle preview data and Markdown with deterministic ordering, validation for malformed or unsupported bundle inputs, recent audit entries, issue summaries, unresolved escalation/high-priority counts, and redaction for API-key-looking values, encrypted key material, bearer tokens, secret-looking notes, and customer-like text.
+   - The local demo UI now exposes a scenario evidence bundle preview/copy region inside the execution graph panel, using the selected local scenario and active collaboration/audit summaries without provider calls, network calls, or external commands.
 5. **Operator-facing shell hardening**
    - Turn provider and agent panels from static scaffolding into test-backed UI states.
    - Add empty, loading, error, and disconnected states before introducing long-running execution.
@@ -49,13 +51,13 @@ Agent Hangar is a young project. It should receive active investment only while 
 
 1. **Workspace portability**
    - Reuse template validation reports in source-checkout workspace import/export flows.
-   - Keep bundle previews free of raw provider API keys and encrypted key material.
+   - Keep portability manifests and bundle previews free of raw provider API keys, bearer tokens, and encrypted key material.
 2. **Provider and agent shell states**
    - Add empty, disconnected, stale, and error states to provider and agent panels before real provider execution is introduced.
    - Keep every state source-checkout friendly and avoid implying live model calls.
-3. **Scenario evidence packaging**
-   - Add local-only scenario evidence bundle previews that reuse run evidence export, audit history, and collaboration triage data.
-   - Validate exported previews for schema version, deterministic ordering, and secret redaction.
+3. **Portable workspace manifest previews**
+   - Add source-checkout-only workspace manifest previews that summarize templates, provider bindings, scenarios, and portability blockers without packaging or registry assumptions.
+   - Reuse existing validation reports and evidence bundle redaction rules so manifests stay deterministic, local-only, and provider-free.
 
 ## Later
 

@@ -30,6 +30,7 @@ import {
 import { replayExecutionTrail, type ExecutionTrailSummary } from './harness/executionTrail';
 import { type DemoWorkspaceScenario } from './harness/demoWorkspace';
 import { formatRunEvidenceExport } from './harness/runEvidenceExport';
+import { formatScenarioEvidenceBundle } from './harness/scenarioEvidenceBundle';
 
 export interface ExecutionGraphPanelProps {
   graph?: ExecutionGraph;
@@ -44,6 +45,7 @@ export interface ExecutionGraphPanelProps {
   secretPreview?: string;
   copyRunEvidence?: (markdown: string) => void | Promise<void>;
   copyAuditHistory?: (markdown: string) => void | Promise<void>;
+  copyScenarioEvidenceBundle?: (markdown: string) => void | Promise<void>;
 }
 
 interface CollaborationStorage {
@@ -84,12 +86,14 @@ export function ExecutionGraphPanel({
   collaborationStorage,
   copyRunEvidence,
   copyAuditHistory,
+  copyScenarioEvidenceBundle,
 }: ExecutionGraphPanelProps) {
   const [selectedScenarioId, setSelectedScenarioId] = useState(
     initialDemoScenarioId ?? demoScenarios?.[0]?.id ?? '',
   );
   const [copyState, setCopyState] = useState<'idle' | 'copied'>('idle');
   const [auditCopyState, setAuditCopyState] = useState<'idle' | 'copied'>('idle');
+  const [scenarioBundleCopyState, setScenarioBundleCopyState] = useState<'idle' | 'copied'>('idle');
   const selectedScenario = useMemo(
     () => demoScenarios?.find((scenario) => scenario.id === selectedScenarioId) ?? demoScenarios?.[0],
     [demoScenarios, selectedScenarioId],
@@ -137,6 +141,15 @@ export function ExecutionGraphPanel({
       collaborationItems: collaborationTriage.rows,
     })
   ), [activeAuditEntries, collaborationState.auditEntries, collaborationTriage.rows, controlState?.auditLog]);
+  const scenarioEvidenceBundle = useMemo(() => (
+    selectedScenario
+      ? formatScenarioEvidenceBundle({
+        scenario: selectedScenario,
+        collaborationTriage,
+        auditHistoryPreview,
+      })
+      : undefined
+  ), [auditHistoryPreview, collaborationTriage, selectedScenario]);
   const allowedControlActions = useMemo(
     () => (controlState ? deriveAllowedExecutionControlActions(controlState) : []),
     [controlState],
@@ -176,6 +189,13 @@ export function ExecutionGraphPanel({
   const handleCopyAuditHistory = () => {
     const copy = copyAuditHistory ?? ((markdown: string) => navigator.clipboard?.writeText(markdown));
     void Promise.resolve(copy(auditHistoryPreview.markdown)).then(() => setAuditCopyState('copied'));
+  };
+  const handleCopyScenarioEvidenceBundle = () => {
+    if (!scenarioEvidenceBundle) {
+      return;
+    }
+    const copy = copyScenarioEvidenceBundle ?? ((markdown: string) => navigator.clipboard?.writeText(markdown));
+    void Promise.resolve(copy(scenarioEvidenceBundle.markdown)).then(() => setScenarioBundleCopyState('copied'));
   };
   const handleControlAction = (action: ExecutionControlAction) => {
     if (!controlState) {
@@ -519,6 +539,30 @@ export function ExecutionGraphPanel({
         </pre>
         {auditCopyState === 'copied' ? <p className="copy-status" role="status">Copied audit history preview.</p> : null}
       </section>
+
+      {scenarioEvidenceBundle ? (
+        <section className="scenario-evidence-bundle-preview" aria-labelledby="scenario-evidence-bundle-heading">
+          <div className="trail-heading">
+            <div>
+              <h3 id="scenario-evidence-bundle-heading">Scenario evidence bundle</h3>
+              <div className="summary-grid trail-summary" aria-label="Scenario evidence bundle metadata">
+                <span>{scenarioEvidenceBundle.schemaVersion}</span>
+                <span>{scenarioEvidenceBundle.scenario.id}</span>
+                <span>{scenarioEvidenceBundle.collaboration.unresolvedEscalationCount} unresolved {scenarioEvidenceBundle.collaboration.unresolvedEscalationCount === 1 ? 'escalation' : 'escalations'}</span>
+              </div>
+            </div>
+            <button className="icon-button" type="button" onClick={handleCopyScenarioEvidenceBundle} aria-label="Copy scenario evidence bundle" title="Copy scenario evidence bundle">
+              <Clipboard size={18} aria-hidden="true" />
+            </button>
+          </div>
+          <pre className="run-evidence-markdown" aria-label="Scenario evidence bundle Markdown preview">
+            {scenarioEvidenceBundle.markdown.split('\n').map((line, index) => (
+              <code key={`${index}-${line}`}>{line || ' '}</code>
+            ))}
+          </pre>
+          {scenarioBundleCopyState === 'copied' ? <p className="copy-status" role="status">Copied scenario evidence bundle.</p> : null}
+        </section>
+      ) : null}
 
       {runEvidenceExport ? (
         <div className="run-evidence-preview" aria-labelledby="run-evidence-heading">
