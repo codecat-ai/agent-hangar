@@ -70,7 +70,7 @@ describe('ExecutionGraphPanel', () => {
 
     render(<ExecutionGraphPanel graph={graph} />);
 
-    expect(screen.getByRole('status')).toHaveTextContent('No runnable nodes are ready.');
+    expect(screen.getByText('No runnable nodes are ready.')).toHaveAttribute('role', 'status');
   });
 
   it('renders deterministic local execution trail counts and timeline without secrets', () => {
@@ -154,7 +154,7 @@ describe('ExecutionGraphPanel', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Copy run evidence export' }));
 
     expect(copyRunEvidence).toHaveBeenCalledTimes(1);
-    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Copied run evidence export.'));
+    await waitFor(() => expect(screen.getByText('Copied run evidence export.')).toHaveAttribute('role', 'status'));
     expect(copyRunEvidence.mock.calls[0]![0]).toContain('schemaVersion: agent-hangar.run-evidence-export.v1');
     expect(copyRunEvidence.mock.calls[0]![0]).toContain('## Timeline');
   });
@@ -322,6 +322,43 @@ describe('ExecutionGraphPanel', () => {
     expect(copySourceCheckoutWalkthrough.mock.calls[0]![0]).toContain('schemaVersion: agent-hangar.source-checkout-operator-walkthrough.v1');
     expect(copySourceCheckoutWalkthrough.mock.calls[0]![0]).toContain('## Steps');
     expect(copySourceCheckoutWalkthrough.mock.calls[0]![0]).not.toMatch(/apiKey|encryptedApiKey|sk-ui-secret|encryptedKeyMaterial|Bearer/i);
+  });
+
+  it('renders source-checkout onboarding as the primary accessible review path without leaking secrets', () => {
+    const scenarios = listDemoWorkspaceScenarios();
+
+    render(
+      <ExecutionGraphPanel
+        demoScenarios={scenarios}
+        initialDemoScenarioId="coordination-happy-path"
+        workspaceManifestProviders={[
+          {
+            id: 'local-provider-demo',
+            kind: 'openai-compatible',
+            displayName: 'Local Demo Provider',
+            baseUrl: 'http://localhost:11434/v1',
+            createdAt: '2026-05-23T10:00:00.000Z',
+            updatedAt: '2026-05-23T10:00:00.000Z',
+            encryptedApiKey: 'local-demo:v1:sk-ui-secret',
+          },
+        ]}
+      />,
+    );
+
+    const onboarding = screen.getByRole('region', { name: 'Source-checkout onboarding' });
+    expect(within(onboarding).getByRole('heading', { name: 'Source-checkout onboarding' })).toBeInTheDocument();
+    expect(within(onboarding).getByText('agent-hangar.source-checkout-onboarding.v1')).toBeInTheDocument();
+    expect(within(onboarding).getByText('Start with the guided source-checkout walkthrough')).toBeInTheDocument();
+    expect(within(onboarding).getByText('Keyboard start')).toBeInTheDocument();
+    expect(within(onboarding).getByText('Tab to Source-checkout onboarding, then continue through provider, template, execution, collaboration, and portability evidence in order.')).toBeInTheDocument();
+    expect(within(onboarding).getByText('Use a local source checkout or cloned repository workspace.')).toBeInTheDocument();
+    expect(within(onboarding).getByRole('status')).toHaveTextContent('Source-checkout onboarding ready.');
+    expect(within(onboarding).getByRole('link', { name: 'Provider evidence' })).toBeInTheDocument();
+    expect(within(onboarding).getByRole('link', { name: 'Template evidence' })).toBeInTheDocument();
+    expect(within(onboarding).getByRole('link', { name: 'Execution evidence' })).toBeInTheDocument();
+    expect(within(onboarding).getByRole('link', { name: 'Collaboration evidence' })).toBeInTheDocument();
+    expect(within(onboarding).getByRole('link', { name: 'Portability evidence' })).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/apiKey|encryptedApiKey|sk-ui-secret|encryptedKeyMaterial|Bearer|\bnpm\s+(?:install|ci|run|exec)\b/i);
   });
 
   it('shows guarded controls for a working local demo node and records pause audit text', () => {
