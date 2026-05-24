@@ -46,6 +46,14 @@ const demoProfiles = [
     baseUrl: 'https://api.example.com/v1',
     health: { checkedAt: demoNow },
   }, localDemoProviderProfileCrypto, demoClock),
+  createProfileFromDraft({
+    id: 'local-provider-demo',
+    kind: 'openai-compatible',
+    displayName: 'Local demo provider',
+    baseUrl: 'http://localhost:11434/v1',
+    apiKey: 'configured',
+    health: { checkedAt: demoNow, modelInventoryUpdatedAt: demoNow },
+  }, localDemoProviderProfileCrypto, demoClock),
 ];
 const demoModelsByProvider: Record<string, NormalizedModel[]> = {
   'openai-main': [
@@ -58,6 +66,12 @@ const demoModelsByProvider: Record<string, NormalizedModel[]> = {
   ],
   'gemini-main': [
     { id: 'gemini-2.5-pro', displayName: 'Gemini 2.5 Pro', providerKind: 'gemini' },
+  ],
+  'local-provider-demo': [
+    { id: 'local-model-planner', displayName: 'Local planner', providerKind: 'openai-compatible' },
+    { id: 'local-model-researcher', displayName: 'Local researcher', providerKind: 'openai-compatible' },
+    { id: 'local-model-implementer', displayName: 'Local implementer', providerKind: 'openai-compatible' },
+    { id: 'local-model-reviewer', displayName: 'Local reviewer', providerKind: 'openai-compatible' },
   ],
 };
 const demoTemplates = [
@@ -87,8 +101,13 @@ const templateProviderOptions = demoProfiles.map((profile) => ({
   modelIds: (demoModelsByProvider[profile.id] ?? []).map((model) => model.id),
 }));
 const escalationPolicies = [
-  { id: 'default-escalation', label: 'Default escalation' },
-  { id: 'review-escalation', label: 'Review escalation' },
+  { id: 'default-escalation', label: 'Default escalation', mode: 'manual' },
+  { id: 'review-escalation', label: 'Review escalation', mode: 'manual' },
+  { id: 'local-escalation-demo', label: 'Local demo escalation', mode: 'manual' },
+];
+const workspaceManifestTools = [
+  { id: 'browser', name: 'Browser', enabled: true },
+  { id: 'shell', name: 'Shell', enabled: false },
 ];
 const demoScenarios = listDemoWorkspaceScenarios();
 const runs = [
@@ -119,7 +138,15 @@ function App() {
           providerOptions={templateProviderOptions}
           escalationPolicies={escalationPolicies}
         />
-        <ExecutionGraphPanel demoScenarios={demoScenarios} initialDemoScenarioId="coordination-happy-path" />
+        <ExecutionGraphPanel
+          demoScenarios={demoScenarios}
+          initialDemoScenarioId="coordination-happy-path"
+          workspaceManifestProviders={demoProfiles}
+          workspaceManifestModelsByProvider={demoModelsByProvider}
+          workspaceManifestTemplates={demoTemplates}
+          workspaceManifestTools={workspaceManifestTools}
+          workspaceManifestEscalationPolicies={escalationPolicies}
+        />
         <div className="panel">
           <h2>Agent runway</h2>
           {runs.map((r) => (

@@ -188,6 +188,53 @@ describe('ExecutionGraphPanel', () => {
     expect(document.body.textContent).not.toMatch(/apiKey|encryptedKeyMaterial|\bsk-[A-Za-z0-9._-]+|Bearer/i);
   });
 
+  it('renders source-checkout workspace manifest preview and copies Markdown through an injected side effect', async () => {
+    const scenarios = listDemoWorkspaceScenarios();
+    const copyWorkspaceManifest = vi.fn();
+
+    render(
+      <ExecutionGraphPanel
+        demoScenarios={scenarios}
+        initialDemoScenarioId="blocked-failure-recovery"
+        workspaceManifestProviders={[
+          {
+            id: 'local-provider-demo',
+            kind: 'openai-compatible',
+            displayName: 'Local Demo Provider',
+            baseUrl: 'http://localhost:11434/v1',
+            createdAt: '2026-05-23T10:00:00.000Z',
+            updatedAt: '2026-05-23T10:00:00.000Z',
+            encryptedApiKey: 'local-demo:v1:sk-ui-secret',
+          },
+        ]}
+        workspaceManifestModelsByProvider={{
+          'local-provider-demo': [{ id: 'local-model-reviewer', displayName: 'Local Reviewer', providerKind: 'openai-compatible' }],
+        }}
+        workspaceManifestTools={[{ id: 'browser', name: 'Browser', enabled: true }]}
+        workspaceManifestEscalationPolicies={[{ id: 'local-escalation-demo', label: 'Local escalation', mode: 'manual' }]}
+        copyWorkspaceManifest={copyWorkspaceManifest}
+      />,
+    );
+
+    const manifest = screen.getByRole('region', { name: 'Workspace portability manifest preview' });
+    expect(within(manifest).getByRole('heading', { name: 'Workspace portability manifest preview' })).toBeInTheDocument();
+    expect(within(manifest).getByText('agent-hangar.workspace-manifest-preview.v1')).toBeInTheDocument();
+    expect(within(manifest).getByText('source-checkout-only')).toBeInTheDocument();
+    expect(within(manifest).getByText('blocked')).toBeInTheDocument();
+    expect(within(manifest).getByText('1 provider')).toBeInTheDocument();
+    expect(within(manifest).getByText('1 unresolved escalation')).toBeInTheDocument();
+    expect(within(manifest).getByText('- Source mode: source-checkout-only')).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/apiKey|encryptedApiKey|sk-ui-secret|encryptedKeyMaterial|Bearer/i);
+
+    fireEvent.click(within(manifest).getByRole('button', { name: 'Copy workspace portability manifest preview' }));
+
+    expect(copyWorkspaceManifest).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(within(manifest).getByRole('status')).toHaveTextContent('Copied workspace portability manifest preview.'));
+    expect(copyWorkspaceManifest.mock.calls[0]![0]).toContain('schemaVersion: agent-hangar.workspace-manifest-preview.v1');
+    expect(copyWorkspaceManifest.mock.calls[0]![0]).toContain('# Workspace Portability Manifest Preview');
+    expect(copyWorkspaceManifest.mock.calls[0]![0]).not.toMatch(/apiKey|encryptedApiKey|sk-ui-secret|encryptedKeyMaterial|Bearer/i);
+  });
+
   it('shows guarded controls for a working local demo node and records pause audit text', () => {
     const { graph, trail } = buildDemoExecutionTrail();
     graph.nodes[1] = { ...graph.nodes[1]!, status: 'working' };
