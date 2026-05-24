@@ -4,7 +4,7 @@
 
 - **Maturity:** `active-development`
 - **Planned cadence:** 2-4 focused sessions per week during foundation hardening.
-- **Current phase:** Foundation, provider management, provider/agent shell states, template studio, execution graph, expanded local demo scenarios, local evidence export, scenario evidence packaging, source-checkout workspace portability manifest previews, source-checkout workspace import/export dry runs, guarded local execution controls, collaboration inbox persistence, collaboration triage filters, compact audit previews, and audit-history preview groundwork.
+- **Current phase:** Foundation, provider management, deterministic provider discovery dry-run previews, provider/agent shell states, template studio, execution graph, expanded local demo scenarios, local evidence export, scenario evidence packaging, source-checkout workspace portability manifest previews, source-checkout workspace import/export dry runs, guarded local execution controls, collaboration inbox persistence, collaboration triage filters, compact audit previews, and audit-history preview groundwork.
 - **Category:** Local-first desktop productivity / multi-agent operations UI.
 
 Agent Hangar is a young project. It should receive active investment only while each session advances a product-shaped workflow: reproducible setup, safe provider management, prompt/template governance, task execution, observability, or usable demo evidence. Avoid adding decorative UI or narrow options before the core operator workflow is dependable.
@@ -19,6 +19,8 @@ Agent Hangar is a young project. It should receive active investment only while 
    - Encrypted local provider profile helpers are implemented in the frontend harness with injectable crypto for later Tauri secure storage.
    - Local provider profile create/edit/delete UI flow is implemented with deterministic controller tests and React tests.
    - Provider cards now include secret-safe health summaries for missing keys, empty inventories, ready providers, degraded providers, and stale model inventories.
+   - Deterministic provider discovery dry-run helpers now consume local provider profiles and fixture responses to produce schema-versioned previews for missing-key, ready, empty inventory, degraded/permission, stale inventory, and malformed fixture states without provider calls, network calls, shell execution, or package-registry assumptions.
+   - The provider profile UI now exposes an accessible local discovery dry-run preview with status/severity guidance, model counts, capability tags, typed fixture issues, aggregate counts, and the existing secret-safe display contract.
    - Pure provider shell-state helpers now derive deterministic empty, disconnected, inventory-empty, stale, degraded/error, and ready summaries with local operator guidance.
    - Normalized model capability tags now summarize text, vision, reasoning, embeddings, fast, long-context, and tool-use support for operator decisions.
    - Preserve the secret-safe display/debug contract as Tauri secure storage and real model discovery refresh adapters are added.
@@ -52,16 +54,16 @@ Agent Hangar is a young project. It should receive active investment only while 
    - Provider and agent panels now use test-backed shell-state derivation instead of static scaffolding.
    - Agent runway helpers now cover empty, queued, working, completed, blocked provider/template bindings, stale provider warnings, and failed/error states without real provider execution.
    - React provider and agent panels now show accessible local guidance/status regions and redact raw API keys, bearer tokens, encrypted key material, and customer-like text.
-   - Keep these shell states local/demo-only until deterministic provider discovery dry-run adapters exist.
+   - Keep these shell states local/demo-only until real provider discovery adapters have their own reviewed contracts and fixture-backed tests.
 
 ## Next
 
-1. **Provider discovery dry-run adapters**
-   - Add deterministic adapter contracts and fixture-backed discovery previews for provider/model refresh states before any live provider call path is enabled.
-   - Surface stale, degraded, permission, and missing-key states in the shell with the same secret-safe display contract.
-2. **Workspace import/export fixture review**
+1. **Workspace import/export fixture review**
    - Add small checked-in source-checkout fixture manifests for import validation examples once the dry-run schema settles.
    - Keep fixtures synthetic, secret-safe, and free of package-registry or provider execution assumptions.
+2. **Provider discovery contract review**
+   - Draft the non-network adapter boundary that future live discovery implementations must satisfy.
+   - Keep the reviewed boundary disabled by default until storage, consent, retry, and audit behavior are specified.
 
 ## Later
 

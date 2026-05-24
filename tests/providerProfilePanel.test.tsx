@@ -2,6 +2,7 @@ import React from 'react';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { ProviderProfilePanel } from '../src/ProviderProfilePanel';
+import { type ProviderDiscoveryFixture } from '../src/harness/providerDiscoveryDryRun';
 import { createProfileFromDraft } from '../src/harness/providerProfileFlow';
 import { type ProviderProfileCrypto } from '../src/harness/providerProfiles';
 
@@ -100,6 +101,74 @@ describe('ProviderProfilePanel', () => {
     expect(within(screen.getByTestId('provider-profile-stale')).getByText('Stale model inventory')).toBeInTheDocument();
     expect(within(screen.getByTestId('provider-profile-empty')).getByText('No models discovered')).toBeInTheDocument();
     expect(document.body.textContent).not.toContain('sk-ui-');
+    expect(document.body.textContent).not.toContain('fake:');
+  });
+
+  it('renders an accessible secret-safe provider discovery dry-run preview', () => {
+    const profiles = [
+      createProfileFromDraft({
+        id: 'ready',
+        kind: 'openai',
+        displayName: 'Ready',
+        baseUrl: 'https://api.openai.com/v1',
+        apiKey: 'sk-ui-ready-secret',
+      }, fakeCrypto, clock),
+      createProfileFromDraft({
+        id: 'degraded',
+        kind: 'gemini',
+        displayName: 'Degraded',
+        baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
+        apiKey: 'AIza-ui-degraded-secret',
+      }, fakeCrypto, clock),
+      createProfileFromDraft({
+        id: 'missing-key',
+        kind: 'anthropic',
+        displayName: 'Missing',
+        baseUrl: 'https://api.anthropic.com',
+      }, fakeCrypto, clock),
+    ];
+    const fixturesByProvider: Record<string, ProviderDiscoveryFixture> = {
+      ready: {
+        checkedAt: '2026-05-23T09:55:00.000Z',
+        inventoryUpdatedAt: '2026-05-23T09:55:00.000Z',
+        models: [{ id: 'gpt-4.1-mini', display_name: 'GPT 4.1 mini' }],
+      },
+      degraded: {
+        checkedAt: '2026-05-23T09:55:00.000Z',
+        apiKeyRef: 'GEMINI_API_KEY',
+        error: { type: 'permission', message: '403 Bearer abc12345 for GEMINI_API_KEY in ACME customer' },
+      },
+    };
+
+    render(
+      <ProviderProfilePanel
+        crypto={fakeCrypto}
+        clock={laterClock}
+        now="2026-05-23T10:00:00.000Z"
+        initialProfiles={profiles}
+        modelsByProvider={{}}
+        discoveryFixturesByProvider={fixturesByProvider}
+      />,
+    );
+
+    const previewRegion = screen.getByRole('region', { name: 'Provider discovery dry-run preview' });
+    expect(within(previewRegion).getByText('Provider discovery dry-run')).toBeInTheDocument();
+    expect(within(previewRegion).getByText('1 ready · 1 warning · 1 error')).toBeInTheDocument();
+    expect(within(previewRegion).getByText('Ready')).toBeInTheDocument();
+    expect(within(previewRegion).getByText('ready · 1 model')).toBeInTheDocument();
+    expect(within(previewRegion).getByText('text 1')).toBeInTheDocument();
+    expect(within(previewRegion).getByText('fast 1')).toBeInTheDocument();
+    expect(within(previewRegion).getByText('Degraded')).toBeInTheDocument();
+    expect(within(previewRegion).getByText('degraded · 0 models')).toBeInTheDocument();
+    expect(within(previewRegion).getByText('Review the sanitized local fixture error before enabling real discovery.')).toBeInTheDocument();
+    expect(within(previewRegion).getByText('Missing')).toBeInTheDocument();
+    expect(within(previewRegion).getByText('needs-key · 0 models')).toBeInTheDocument();
+    expect(within(previewRegion).getByText('Add local key material before previewing model discovery outcomes.')).toBeInTheDocument();
+    expect(document.body.textContent).not.toContain('sk-ui-ready-secret');
+    expect(document.body.textContent).not.toContain('AIza-ui-degraded-secret');
+    expect(document.body.textContent).not.toContain('Bearer abc12345');
+    expect(document.body.textContent).not.toContain('GEMINI_API_KEY');
+    expect(document.body.textContent).not.toContain('ACME customer');
     expect(document.body.textContent).not.toContain('fake:');
   });
 });
