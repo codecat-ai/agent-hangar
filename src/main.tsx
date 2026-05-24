@@ -7,6 +7,7 @@ import { ProviderProfilePanel } from './ProviderProfilePanel';
 import { TemplateStudioPanel } from './TemplateStudioPanel';
 import { createAgentRun, transitionRun } from './harness/agentRuntime';
 import { listDemoWorkspaceScenarios } from './harness/demoWorkspace';
+import { type ProviderDiscoveryFixture } from './harness/providerDiscoveryDryRun';
 import { type NormalizedModel } from './harness/providerCatalog';
 import { createProfileFromDraft } from './harness/providerProfileFlow';
 import { localDemoProviderProfileCrypto } from './harness/providerProfiles';
@@ -76,6 +77,44 @@ const demoModelsByProvider: Record<string, NormalizedModel[]> = {
     { id: 'local-model-reviewer', displayName: 'Local reviewer', providerKind: 'openai-compatible' },
   ],
 };
+const demoDiscoveryFixturesByProvider: Record<string, ProviderDiscoveryFixture> = {
+  'openai-main': {
+    checkedAt: demoNow,
+    inventoryUpdatedAt: '2026-05-23T09:30:00.000Z',
+    models: [
+      { id: 'gpt-4.1', display_name: 'GPT 4.1' },
+      { id: 'text-embedding-3-large', display_name: 'Text embedding 3 large' },
+    ],
+  },
+  'anthropic-main': {
+    checkedAt: demoNow,
+    inventoryUpdatedAt: '2026-05-21T09:00:00.000Z',
+    models: [
+      { id: 'claude-sonnet-4-5', display_name: 'Claude Sonnet 4.5' },
+      { id: 'claude-3-5-haiku-latest', display_name: 'Claude 3.5 Haiku' },
+    ],
+  },
+  'gemini-main': {
+    checkedAt: demoNow,
+    inventoryUpdatedAt: demoNow,
+    error: { type: 'degraded', message: 'Model discovery returned a provider error.' },
+  },
+  'third-party': {
+    checkedAt: demoNow,
+    inventoryUpdatedAt: demoNow,
+    models: [],
+  },
+  'local-provider-demo': {
+    checkedAt: demoNow,
+    inventoryUpdatedAt: demoNow,
+    models: [
+      { id: 'local-model-planner', displayName: 'Local planner' },
+      { id: 'local-model-researcher', displayName: 'Local researcher' },
+      { id: 'local-model-implementer', displayName: 'Local implementer' },
+      { id: 'local-model-reviewer', displayName: 'Local reviewer' },
+    ],
+  },
+};
 const demoTemplates = [
   createTemplateFromPreset('planner', {
     id: () => 'template-planner-demo',
@@ -142,6 +181,7 @@ function App() {
           now={demoNow}
           initialProfiles={demoProfiles}
           modelsByProvider={demoModelsByProvider}
+          discoveryFixturesByProvider={demoDiscoveryFixturesByProvider}
         />
         <TemplateStudioPanel
           clock={demoTemplateClock}

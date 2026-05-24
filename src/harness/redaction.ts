@@ -6,8 +6,8 @@ const secretPatterns = [
 ];
 
 const customerLikePatterns = [
-  /\bACME\b/g,
   /\b[A-Z][A-Z0-9&.-]{2,}\s+(?:customer|workspace|account|tenant|project)\b/g,
+  /\bACME\b/g,
 ];
 
 export function redactOperatorText(value: string | undefined, fallback = 'Local demo state requires operator review.'): string {

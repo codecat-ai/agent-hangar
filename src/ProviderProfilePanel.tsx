@@ -1,6 +1,13 @@
 import React, { useMemo, useState } from 'react';
 import { Pencil, Plus, RefreshCw, Save, Trash2, X } from 'lucide-react';
 import {
+  buildProviderDiscoveryDryRun,
+  summarizeDiscoveryDryRun,
+  type ProviderDiscoveryFixture,
+  type ProviderDiscoveryDryRunPreview,
+  type ProviderDiscoveryDryRunSeverity,
+} from './harness/providerDiscoveryDryRun';
+import {
   createProfileFromDraft,
   deleteProviderProfileById,
   draftFromProfile,
@@ -21,9 +28,10 @@ export interface ProviderProfilePanelProps {
   now: string;
   initialProfiles: ProviderProfile[];
   modelsByProvider: Record<string, NormalizedModel[]>;
+  discoveryFixturesByProvider?: Record<string, ProviderDiscoveryFixture | unknown>;
 }
 
-export function ProviderProfilePanel({ crypto, clock, now, initialProfiles, modelsByProvider }: ProviderProfilePanelProps) {
+export function ProviderProfilePanel({ crypto, clock, now, initialProfiles, modelsByProvider, discoveryFixturesByProvider }: ProviderProfilePanelProps) {
   const [profiles, setProfiles] = useState<ProviderProfile[]>(initialProfiles);
   const [draft, setDraft] = useState<ProviderProfileDraft>(emptyProviderProfileDraft());
   const [editingId, setEditingId] = useState<string | undefined>();
@@ -33,6 +41,18 @@ export function ProviderProfilePanel({ crypto, clock, now, initialProfiles, mode
     () => deriveProviderShellState({ profiles, modelsByProvider, now }),
     [modelsByProvider, now, profiles],
   );
+  const discoveryPreviews = useMemo(
+    () => discoveryFixturesByProvider
+      ? buildProviderDiscoveryDryRun({
+        profiles,
+        fixturesByProvider: discoveryFixturesByProvider,
+        now,
+        staleAfterMs: 48 * 60 * 60 * 1000,
+      })
+      : [],
+    [discoveryFixturesByProvider, now, profiles],
+  );
+  const discoverySummary = useMemo(() => summarizeDiscoveryDryRun(discoveryPreviews), [discoveryPreviews]);
 
   function updateDraft(field: keyof ProviderProfileDraft, value: string) {
     setDraft((current) => ({ ...current, [field]: value }));
@@ -178,6 +198,58 @@ export function ProviderProfilePanel({ crypto, clock, now, initialProfiles, mode
           );
         })}
       </div>
+
+      {discoveryFixturesByProvider ? (
+        <ProviderDiscoveryDryRunRegion previews={discoveryPreviews} summaryText={formatDiscoverySummary(discoverySummary)} />
+      ) : null}
     </section>
   );
+}
+
+function ProviderDiscoveryDryRunRegion({ previews, summaryText }: { previews: ProviderDiscoveryDryRunPreview[]; summaryText: string }) {
+  return (
+    <section className="provider-discovery-preview" aria-label="Provider discovery dry-run preview">
+      <div className="trail-heading">
+        <div>
+          <h3 id="provider-discovery-preview-heading">Provider discovery dry-run</h3>
+          <p>{summaryText}</p>
+        </div>
+      </div>
+      <div className="profile-list" aria-label="Provider discovery dry-run summaries">
+        {previews.map((preview) => (
+          <article className="card provider-card profile-card" key={preview.provider.id}>
+            <span className={`dot ${preview.status}`} />
+            <div className="card-body">
+              <div className="card-title">
+                <strong>{preview.provider.name}</strong>
+                <small>{preview.status} · {preview.modelCount} {preview.modelCount === 1 ? 'model' : 'models'}</small>
+              </div>
+              <small className="health-detail">{preview.guidance}</small>
+              {preview.issues.length > 0 ? (
+                <ul className="issue-list">
+                  {preview.issues.map((issue) => <li key={`${preview.provider.id}-${issue.code}`}>{issue.message}</li>)}
+                </ul>
+              ) : null}
+              <div className="tag-row">
+                {preview.capabilities.tags.length > 0
+                  ? preview.capabilities.tags.map((tag) => <span className="tag" key={tag}>{tag} {preview.capabilities.counts[tag]}</span>)
+                  : <span className="tag muted">no model capabilities</span>}
+              </div>
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function formatDiscoverySummary(summary: ReturnType<typeof summarizeDiscoveryDryRun>): string {
+  const readyCount = summary.countsByStatus.ready ?? 0;
+  const warningCount = severityCount(summary.countsBySeverity, 'warning');
+  const errorCount = severityCount(summary.countsBySeverity, 'error');
+  return `${readyCount} ready · ${warningCount} warning · ${errorCount} error`;
+}
+
+function severityCount(counts: Partial<Record<ProviderDiscoveryDryRunSeverity, number>>, severity: ProviderDiscoveryDryRunSeverity): number {
+  return counts[severity] ?? 0;
 }
