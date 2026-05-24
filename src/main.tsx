@@ -1,6 +1,7 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import './styles.css';
+import { AgentRunwayPanel } from './AgentRunwayPanel';
 import { ExecutionGraphPanel } from './ExecutionGraphPanel';
 import { ProviderProfilePanel } from './ProviderProfilePanel';
 import { TemplateStudioPanel } from './TemplateStudioPanel';
@@ -10,6 +11,7 @@ import { type NormalizedModel } from './harness/providerCatalog';
 import { createProfileFromDraft } from './harness/providerProfileFlow';
 import { localDemoProviderProfileCrypto } from './harness/providerProfiles';
 import { createTemplateFromPreset } from './harness/promptTemplates';
+import { deriveProviderShellState } from './harness/shellStates';
 
 const demoClock = () => new Date('2026-05-23T10:00:00.000Z');
 const demoTemplateClock = () => '2026-05-23T10:00:00.000Z';
@@ -115,6 +117,16 @@ const runs = [
   transitionRun(createAgentRun('task-1', 'researcher'), 'completed'),
   transitionRun(createAgentRun('task-1', 'reviewer'), 'failed', 'Needs a provider key'),
 ];
+const demoProviderShellState = deriveProviderShellState({
+  profiles: demoProfiles,
+  modelsByProvider: demoModelsByProvider,
+  now: demoNow,
+});
+const demoRunwayBindings = [
+  { agentId: 'planner', providerProfileId: 'openai-main', templateId: 'template-planner-demo' },
+  { agentId: 'researcher', providerProfileId: 'local-provider-demo', templateId: 'template-local-researcher' },
+  { agentId: 'reviewer', providerProfileId: 'third-party', templateId: 'template-reviewer-demo' },
+];
 function App() {
   return (
     <main className="shell">
@@ -147,16 +159,11 @@ function App() {
           workspaceManifestTools={workspaceManifestTools}
           workspaceManifestEscalationPolicies={escalationPolicies}
         />
-        <div className="panel">
-          <h2>Agent runway</h2>
-          {runs.map((r) => (
-            <article className="card" key={r.agentId}>
-              <span className={`sprite ${r.pixelState}`} aria-label={r.pixelState} />
-              <strong>{r.agentId}</strong>
-              <small>{r.status}{r.error ? ` · ${r.error}` : ''}</small>
-            </article>
-          ))}
-        </div>
+        <AgentRunwayPanel
+          runs={runs}
+          bindings={demoRunwayBindings}
+          providerShellState={demoProviderShellState}
+        />
         <div className="panel wide">
           <h2>Harness principles</h2>
           <ol>

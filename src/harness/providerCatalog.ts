@@ -1,3 +1,5 @@
+import { redactOperatorText } from './redaction';
+
 export type ProviderKind = 'openai' | 'anthropic' | 'gemini' | 'openai-compatible';
 export interface ProviderConfig { id: string; kind: ProviderKind; displayName: string; baseUrl: string; apiKeyRef?: string }
 export type ModelCapabilityTag = 'text' | 'vision' | 'reasoning' | 'embeddings' | 'fast' | 'longContext' | 'toolUse';
@@ -186,7 +188,7 @@ function isStaleInventory(modelInventoryUpdatedAt: string | undefined, now: stri
 }
 
 function sanitizeHealthDetail(detail: string, apiKeyRef: string | undefined): string {
-  let sanitized = detail.replace(/\b(?:sk|sk-ant|sk-proj|AIza)[A-Za-z0-9._-]{6,}\b/g, '[redacted]');
+  let sanitized = redactOperatorText(detail, 'Provider reported an error during model discovery.');
 
   if (apiKeyRef) {
     sanitized = sanitized.replaceAll(apiKeyRef, '[redacted-ref]');
