@@ -24,6 +24,7 @@ Agent Hangar は **active-development** の基盤開発段階です。Rust core 
 - ローカル provider profile の作成、編集、削除 UI flow。secret-safe な key status、書き込み専用の replacement key 処理、missing-key、degraded、stale、empty 状態の model discovery health summary を備えます。
 - ローカル provider profile と fixture response を消費し、provider、network、shell、registry call なしで schema version 付きの missing-key、ready、empty inventory、degraded/permission、stale inventory、malformed fixture preview を生成する、純粋で確定的な provider discovery dry-run helper。
 - accessible な summary、status/severity guidance、model count、capability tag、型付き fixture issue、集計 count を表示し、生の API key、bearer token、encrypted key material、顧客らしい text を表示しない React provider discovery dry-run preview。
+- `docs/provider-discovery-contract.md` で provider discovery adapter contract を review 済みです。実際の provider discovery を有効にする前に満たすべき、既定で無効な live-adapter boundary、consent、timeout/retry、typed failure、audit、fixture、redaction gate を定義しています。
 - empty、disconnected、stale、degraded/error、queued、working、completed、blocked、failed の summary、ローカル recovery guidance、secret-safe redaction を確定的に返す、純粋な provider/Agent shell-state helper。
 - 確定的な role preset、template の作成/更新/削除、`{{variableName}}` の変数抽出、不変の version history、provider/model/escalation validation、workspace tool requirement check、escalation policy schema check、policy variable binding check、schema version 付き validation report を扱う純粋な prompt template helper。
 - preset/template の閲覧、role preset からの作成、prompt record の編集、provider secret を出さない validation/version status、欠落または無効な tool summary、不明な policy variable summary の表示を行う React template studio 基盤。
@@ -101,7 +102,8 @@ npm test
 
 - Provider profile は、暗号化された API key を持つローカル表現として扱えます。
 - Provider と Agent の shell-state summary は確定的なローカル投影であり、表示前に生の API key、bearer token、encrypted key material、顧客らしい text を redact します。
-- Provider discovery dry-run preview はローカル fixture object だけを使用し、preview data や UI に出す前に、生の API key、bearer token、encrypted key material、API key reference、顧客らしい text を redact します。
+- Provider discovery dry-run preview はローカル fixture object だけを消費し、preview data や UI に出す前に生の API key、bearer token、encrypted key material、API key reference、顧客らしい text を redaction します。
+- Provider discovery adapter contract は、将来の live adapter を有効にする前に、明示的な operator consent、bounded timeout/retry、typed failure、response minimization、fixture-backed redaction test、local-only で secret-safe な audit data を要求します。
 - Prompt template はローカル record として扱い、provider/model 識別子だけを保存し、生の provider/API secret は保存しません。
 - Execution graph summary は node、edge、status、issue、runnable-node の count のみを公開し、生の API key や encrypted key material は公開しません。
 - ローカル run evidence export preview は、確定的な Markdown を表示する前に workspace id、actor/title/note/node text、graph issue、trail issue を再 sanitize します。
@@ -145,11 +147,11 @@ active-development cadence、Now/Next/Later 計画、maintenance triggers、comp
 
 現在の重点：
 
-- Tauri secure storage と実際の model discovery adapter を追加する間も、provider profile 編集の secret-safe 制約を維持する。
-- 将来の live adapter contract が review されるまで、確定的な provider discovery dry-run preview を local/demo-only に保つ。
-- workspace import/export が形になる間も、template validation report の secret-safe 制約を維持する。
-- workspace portability manifest、scenario evidence bundle、collaboration triage、audit history、compact operator summary、execution controls を確定的かつ provider-free に保つ。
-- live discovery implementation を既定で有効にする前に、provider discovery adapter contract を review する。
+- Tauri secure storage と実際の model discovery adapter を追加する間も、provider profile editing を secret-safe に保つ。
+- 将来の live adapter prototype が review 済み contract gate を満たすまで、確定的な provider discovery dry-run preview を local/demo-only に保つ。
+- Workspace import/export が形になる間も、template validation report を secret-safe に保つ。
+- Workspace portability manifest、scenario evidence bundle、collaboration triage、audit history、compact operator summary、execution control を deterministic かつ provider-free に保つ。
+- Secure storage、operator consent、retry/cancellation、audit、redaction behavior が test で覆われてから、既定で無効な fixture-backed provider discovery adapter shell を prototype する。
 
 ## コントリビューション
 

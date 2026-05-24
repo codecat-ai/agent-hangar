@@ -24,6 +24,7 @@ Agent Hangar 处于 **active-development** 基础建设阶段。Rust core harnes
 - 本地 provider profile 创建、编辑、删除 UI flow，包含 secret-safe 的 key 状态、只写式 replacement key 处理，以及 missing-key、degraded、stale、empty 状态的模型发现 health summary。
 - 纯确定性 provider discovery dry-run helper，使用本地 provider profile 和 fixture response 生成带 schema version 的 missing-key、ready、empty inventory、degraded/permission、stale inventory 和 malformed fixture preview，且不调用 provider、network、shell 或 registry。
 - React provider discovery dry-run preview，包含 accessible summary、status/severity guidance、model count、capability tag、类型化 fixture issue 和聚合计数，并且不显示原始 API key、bearer token、encrypted key material 或客户类文本。
+- `docs/provider-discovery-contract.md` 中已评审 provider discovery adapter contract，定义默认禁用的 live-adapter 边界，以及在启用真实 provider discovery 前必须满足的 consent、timeout/retry、typed failure、audit、fixture 和 redaction gate。
 - 纯 provider 和 Agent shell-state helper，用确定性方式生成 empty、disconnected、stale、degraded/error、queued、working、completed、blocked 和 failed summary，并提供本地恢复 guidance 与 secret-safe redaction。
 - 纯 prompt template helper，支持确定性的角色 preset、template 创建/更新/删除、`{{variableName}}` 变量提取、不可变版本历史、provider/model/escalation 校验、workspace tool requirement 检查、escalation policy schema 检查、policy variable binding 检查和带 schema version 的 validation report。
 - React template studio 基础面板，用于查看 preset/template、从角色 preset 创建、编辑 prompt record，并在不暴露 provider secret 的情况下显示校验/版本状态、缺失或禁用 tool summary，以及未知 policy variable summary。
@@ -101,7 +102,8 @@ npm test
 
 - Provider profile 可以在本地表示，并保存加密后的 API key。
 - Provider 与 Agent shell-state summary 是确定性的本地投影，并在渲染前清理原始 API key、bearer token、encrypted key material 和客户类文本。
-- Provider discovery dry-run preview 只使用本地 fixture object，并会在暴露 preview data 或 UI 前清理原始 API key、bearer token、encrypted key material、API key reference 和客户类文本。
+- Provider discovery dry-run preview 只读取本地 fixture object，并在暴露 preview data 或 UI 前清理原始 API key、bearer token、encrypted key material、API key reference 和客户类文本。
+- Provider discovery adapter contract 要求在未来任何 live adapter 启用前，先具备显式 operator consent、受限 timeout/retry、typed failure、response minimization、fixture-backed redaction test，以及 local-only、secret-safe audit data。
 - Prompt template 是本地记录，只保存 provider/model 标识符，不保存原始 provider/API secret。
 - Execution graph summary 只暴露 node、edge、status、issue 和 runnable-node 计数，不暴露原始 API key 或 encrypted key material。
 - 本地 run evidence export preview 在渲染确定性 Markdown 前，会重新清理 workspace id、actor/title/note/node 文本、graph issue 和 trail issue。
@@ -145,11 +147,11 @@ npm test
 
 当前重点：
 
-- 在添加 Tauri secure storage 和真实模型发现 adapter 时，继续保持 provider profile 编辑的 secret-safe 约束。
-- 在未来 live adapter contract 完成评审前，让确定性的 provider discovery dry-run preview 保持 local/demo-only。
-- 在 workspace import/export 成型时，继续保持 template validation report 的 secret-safe 约束。
-- 保持 workspace portability manifest、scenario evidence bundle、collaboration triage、audit history、紧凑 operator summary 和 execution controls 的确定性与 provider-free 约束。
-- 在默认启用任何 live discovery implementation 前，先评审 provider discovery adapter contract。
+- 在加入 Tauri secure storage 和真实 model discovery adapter 时，继续保证 provider profile editing 的 secret-safe 行为。
+- 在未来任何 live adapter prototype 满足已评审 contract gate 前，让确定性的 provider discovery dry-run preview 保持 local/demo-only。
+- 随着 workspace import/export 成形，继续保证 template validation report 的 secret-safe 行为。
+- 让 workspace portability manifest、scenario evidence bundle、collaboration triage、audit history、紧凑 operator summary 和 execution control 保持 deterministic 且 provider-free。
+- 只有在 secure storage、operator consent、retry/cancellation、audit 和 redaction 行为都有测试覆盖后，才 prototype 默认禁用的 fixture-backed provider discovery adapter shell。
 
 ## 贡献
 

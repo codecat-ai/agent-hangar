@@ -24,6 +24,7 @@ Implemented foundation pieces:
 - Local provider profile create/edit/delete UI flow with secret-safe key status, write-only replacement key handling, and model discovery health summaries for missing-key, degraded, stale, and empty states.
 - Pure deterministic provider discovery dry-run helper that consumes local provider profiles and fixture responses to produce schema-versioned missing-key, ready, empty inventory, degraded/permission, stale inventory, and malformed fixture previews without provider, network, shell, or registry calls.
 - React provider discovery dry-run preview with accessible summaries, status/severity guidance, model counts, capability tags, typed fixture issues, aggregate counts, and no raw API keys, bearer tokens, encrypted key material, or customer-like text.
+- Reviewed provider discovery adapter contract in `docs/provider-discovery-contract.md`, defining the disabled-by-default live-adapter boundary, consent, timeout/retry, typed failure, audit, fixture, and redaction gates that must be satisfied before real provider discovery is enabled.
 - Pure provider and agent shell-state helpers for deterministic empty, disconnected, stale, degraded/error, queued, working, completed, blocked, and failed summaries with local recovery guidance and secret-safe redaction.
 - Pure prompt template helpers for deterministic role presets, template create/update/delete behavior, `{{variableName}}` extraction, immutable version history, provider/model/escalation validation, workspace tool requirement checks, escalation policy schema checks, policy variable binding checks, and schema-versioned validation reports.
 - React template studio foundation for viewing presets/templates, creating from role presets, editing prompt records, and showing validation/version status plus missing/disabled tool and unknown policy-variable summaries without exposing provider secrets.
@@ -102,6 +103,7 @@ No production provider configuration is required yet. The foundation configurati
 - Provider profiles can be represented locally with encrypted API keys.
 - Provider and agent shell-state summaries are deterministic local projections and redact raw API keys, bearer tokens, encrypted key material, and customer-like text before rendering.
 - Provider discovery dry-run previews consume only local fixture objects and redact raw API keys, bearer tokens, encrypted key material, API key references, and customer-like text before exposing preview data or UI.
+- The provider discovery adapter contract requires explicit operator consent, bounded timeout/retry behavior, typed failures, response minimization, fixture-backed redaction tests, and local-only secret-safe audit data before any future live adapter can be enabled.
 - Prompt templates are local records and store provider/model identifiers, not raw provider/API secrets.
 - Execution graph summaries expose node, edge, status, issue, and runnable-node counts without raw API keys or encrypted key material.
 - Local run evidence export previews re-sanitize workspace ids, actor/title/note/node text, graph issues, and trail issues before rendering deterministic Markdown.
@@ -146,10 +148,10 @@ See [ROADMAP.md](ROADMAP.md) for the active-development cadence, Now/Next/Later 
 Current focus:
 
 - Keep provider profile editing secret-safe while Tauri secure storage and real model discovery adapters are added.
-- Keep deterministic provider discovery dry-run previews local/demo-only while future live adapter contracts are reviewed.
+- Keep deterministic provider discovery dry-run previews local/demo-only while any future live adapter prototype is held behind the reviewed contract gates.
 - Keep template validation reports secret-safe as workspace import/export takes shape.
 - Keep workspace portability manifests, scenario evidence bundles, collaboration triage, audit history, compact operator summaries, and execution controls deterministic and provider-free.
-- Review the provider discovery adapter contract before any live discovery implementation is enabled by default.
+- Prototype a disabled-by-default fixture-backed provider discovery adapter shell only after secure storage, operator consent, retry/cancellation, audit, and redaction behavior are covered by tests.
 
 ## Contributing
 
