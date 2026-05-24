@@ -132,7 +132,7 @@ describe('ExecutionGraphPanel', () => {
     expect(screen.getByText('delegation 1 · review 1 · broadcast 1 · escalation 2')).toBeInTheDocument();
     expect(screen.getByText('2 urgent')).toBeInTheDocument();
     expect(screen.getByText('2 audit entries')).toBeInTheDocument();
-    expect(screen.getByText('- Unresolved escalations: 1')).toBeInTheDocument();
+    expect(screen.getAllByText('- Unresolved escalations: 1').length).toBeGreaterThan(0);
     expect(screen.getByText('Escalate failed implementation review')).toBeInTheDocument();
     expect(document.body.textContent).not.toMatch(/apiKey|encryptedKeyMaterial|sk-[A-Za-z0-9._-]{8,}|customer[A-Za-z0-9_-]*|\bcurl\b|\bnpm\s+(?:run|install|exec|test|start)\b/);
   });
@@ -157,6 +157,35 @@ describe('ExecutionGraphPanel', () => {
     await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Copied run evidence export.'));
     expect(copyRunEvidence.mock.calls[0]![0]).toContain('schemaVersion: agent-hangar.run-evidence-export.v1');
     expect(copyRunEvidence.mock.calls[0]![0]).toContain('## Timeline');
+  });
+
+  it('renders local scenario evidence bundle preview text and copies through an injected side effect', async () => {
+    const scenarios = listDemoWorkspaceScenarios();
+    const copyScenarioEvidenceBundle = vi.fn();
+
+    render(
+      <ExecutionGraphPanel
+        demoScenarios={scenarios}
+        initialDemoScenarioId="blocked-failure-recovery"
+        copyScenarioEvidenceBundle={copyScenarioEvidenceBundle}
+      />,
+    );
+
+    const bundle = screen.getByRole('region', { name: 'Scenario evidence bundle' });
+    expect(within(bundle).getByRole('heading', { name: 'Scenario evidence bundle' })).toBeInTheDocument();
+    expect(within(bundle).getByText('agent-hangar.scenario-evidence-bundle.v1')).toBeInTheDocument();
+    expect(within(bundle).getByText('blocked-failure-recovery')).toBeInTheDocument();
+    expect(within(bundle).getByText('- Scenario: Blocked failure recovery (`blocked-failure-recovery`)')).toBeInTheDocument();
+    expect(within(bundle).getByText('- Unresolved escalations: 1')).toBeInTheDocument();
+    expect(within(bundle).getByText('## Run Evidence Export')).toBeInTheDocument();
+
+    fireEvent.click(within(bundle).getByRole('button', { name: 'Copy scenario evidence bundle' }));
+
+    expect(copyScenarioEvidenceBundle).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(within(bundle).getByRole('status')).toHaveTextContent('Copied scenario evidence bundle.'));
+    expect(copyScenarioEvidenceBundle.mock.calls[0]![0]).toContain('schemaVersion: agent-hangar.scenario-evidence-bundle.v1');
+    expect(copyScenarioEvidenceBundle.mock.calls[0]![0]).toContain('## Run Evidence Export');
+    expect(document.body.textContent).not.toMatch(/apiKey|encryptedKeyMaterial|\bsk-[A-Za-z0-9._-]+|Bearer/i);
   });
 
   it('shows guarded controls for a working local demo node and records pause audit text', () => {
