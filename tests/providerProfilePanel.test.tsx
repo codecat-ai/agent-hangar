@@ -171,4 +171,47 @@ describe('ProviderProfilePanel', () => {
     expect(document.body.textContent).not.toContain('ACME customer');
     expect(document.body.textContent).not.toContain('fake:');
   });
+
+  it('renders a disabled local provider discovery adapter shell preview without secrets', () => {
+    const profiles = [
+      createProfileFromDraft({
+        id: 'ready',
+        kind: 'openai',
+        displayName: 'Ready',
+        baseUrl: 'https://api.openai.com/v1',
+        apiKey: 'sk-ui-ready-secret',
+      }, fakeCrypto, clock),
+    ];
+
+    render(
+      <ProviderProfilePanel
+        crypto={fakeCrypto}
+        clock={laterClock}
+        now="2026-05-23T10:00:00.000Z"
+        initialProfiles={profiles}
+        modelsByProvider={{}}
+        discoveryFixturesByProvider={{
+          ready: {
+            checkedAt: '2026-05-23T09:55:00.000Z',
+            inventoryUpdatedAt: '2026-05-23T09:55:00.000Z',
+            apiKeyRef: 'OPENAI_API_KEY',
+            error: { type: 'permission', message: '403 Bearer abc12345 for OPENAI_API_KEY in ACME customer' },
+          },
+        }}
+      />,
+    );
+
+    const adapterRegion = screen.getByRole('region', { name: 'Provider discovery adapter shell preview' });
+    expect(within(adapterRegion).getByText('Provider discovery adapter shell')).toBeInTheDocument();
+    expect(within(adapterRegion).getByText('0 ready · 1 blocked · 1 issue')).toBeInTheDocument();
+    expect(within(adapterRegion).getByText('Ready')).toBeInTheDocument();
+    expect(within(adapterRegion).getByText('blocked · 0 models')).toBeInTheDocument();
+    expect(within(adapterRegion).getByText('Provider discovery adapter shell is disabled by default.')).toBeInTheDocument();
+    expect(within(adapterRegion).getByText('Enable the fixture adapter shell in local demo state before requesting discovery.')).toBeInTheDocument();
+    expect(document.body.textContent).not.toContain('sk-ui-ready-secret');
+    expect(document.body.textContent).not.toContain('Bearer abc12345');
+    expect(document.body.textContent).not.toContain('OPENAI_API_KEY');
+    expect(document.body.textContent).not.toContain('ACME customer');
+    expect(document.body.textContent).not.toContain('fake:');
+  });
 });

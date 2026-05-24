@@ -2,9 +2,9 @@
 
 [English](../README.md) | [中文](../README-zh.md) | [日本語](../README-ja.md)
 
-Status: reviewed boundary, disabled-by-default future work.
+Status: reviewed boundary; disabled fixture-backed adapter shell implemented; live provider discovery remains disabled.
 
-Agent Hangar currently ships deterministic provider discovery dry-run previews only. This document records the adapter boundary that future live discovery implementations must satisfy before any provider call is enabled in the desktop app.
+Agent Hangar currently ships deterministic provider discovery dry-run previews and a disabled-by-default fixture-backed adapter shell only. This document records the adapter boundary that future live discovery implementations must satisfy before any provider call is enabled in the desktop app.
 
 ## Goals
 
@@ -93,6 +93,12 @@ Before enabling a live adapter, add fixture-backed tests for:
 
 The current dry-run preview remains the reference harness for expected result shape and redaction behavior.
 
+## Disabled adapter shell
+
+The implemented shell in `src/harness/providerDiscoveryAdapterShell.ts` is fixture-backed and remains disabled by default. It exercises the reviewed request/result boundary with typed blocked, missing-consent, missing-options, degraded/permission, malformed, stale, and ready results; injected request timestamps/options only; clone-safe JSON/Markdown previews; local audit metadata; next-action guidance; and redaction for raw API keys, bearer tokens, encrypted key material, API key references, and customer-like text.
+
+The shell does not make provider calls, network calls, shell calls, package-registry calls, or Tauri API calls. The React surface is a read-only local preview in the provider profile panel.
+
 ## UI readiness gates
 
 A live provider discovery button should stay disabled by default until all of these are true:
@@ -106,4 +112,4 @@ A live provider discovery button should stay disabled by default until all of th
 
 ## Follow-up roadmap
 
-This contract review completes the current "Provider discovery contract review" roadmap item. The next phase should be narrower: prototype one disabled-by-default fixture-backed adapter shell that exercises the request/result types without making live provider calls, or perform a cadence review to decide whether Agent Hangar should move from `active-development` to `growth` before adding live integration work.
+This contract review completed the "Provider discovery contract review" roadmap item, and the disabled fixture-backed adapter shell has now been implemented. The next phase should stay narrow: perform a cadence review to decide whether Agent Hangar should move from `active-development` to `growth`, or continue live discovery readiness work behind the same disabled-by-default contract gates.

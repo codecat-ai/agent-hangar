@@ -1,6 +1,10 @@
 import React, { useMemo, useState } from 'react';
 import { Pencil, Plus, RefreshCw, Save, Trash2, X } from 'lucide-react';
 import {
+  evaluateProviderDiscoveryAdapterShell,
+  type ProviderDiscoveryAdapterShellResult,
+} from './harness/providerDiscoveryAdapterShell';
+import {
   buildProviderDiscoveryDryRun,
   summarizeDiscoveryDryRun,
   type ProviderDiscoveryFixture,
@@ -53,6 +57,15 @@ export function ProviderProfilePanel({ crypto, clock, now, initialProfiles, mode
     [discoveryFixturesByProvider, now, profiles],
   );
   const discoverySummary = useMemo(() => summarizeDiscoveryDryRun(discoveryPreviews), [discoveryPreviews]);
+  const adapterShellPreviews = useMemo(
+    () => discoveryFixturesByProvider
+      ? profiles.map((profile) => evaluateProviderDiscoveryAdapterShell({
+        profile,
+        fixture: discoveryFixturesByProvider[profile.id],
+      }))
+      : [],
+    [discoveryFixturesByProvider, profiles],
+  );
 
   function updateDraft(field: keyof ProviderProfileDraft, value: string) {
     setDraft((current) => ({ ...current, [field]: value }));
@@ -200,7 +213,13 @@ export function ProviderProfilePanel({ crypto, clock, now, initialProfiles, mode
       </div>
 
       {discoveryFixturesByProvider ? (
-        <ProviderDiscoveryDryRunRegion previews={discoveryPreviews} summaryText={formatDiscoverySummary(discoverySummary)} />
+        <>
+          <ProviderDiscoveryDryRunRegion previews={discoveryPreviews} summaryText={formatDiscoverySummary(discoverySummary)} />
+          <ProviderDiscoveryAdapterShellRegion
+            previews={adapterShellPreviews}
+            summaryText={formatAdapterShellSummary(adapterShellPreviews)}
+          />
+        </>
       ) : null}
     </section>
   );
@@ -243,11 +262,59 @@ function ProviderDiscoveryDryRunRegion({ previews, summaryText }: { previews: Pr
   );
 }
 
+function ProviderDiscoveryAdapterShellRegion({ previews, summaryText }: { previews: ProviderDiscoveryAdapterShellResult[]; summaryText: string }) {
+  return (
+    <section className="provider-discovery-adapter-preview" aria-label="Provider discovery adapter shell preview">
+      <div className="trail-heading">
+        <div>
+          <h3 id="provider-discovery-adapter-preview-heading">Provider discovery adapter shell</h3>
+          <p>{summaryText}</p>
+        </div>
+      </div>
+      <div className="profile-list" aria-label="Provider discovery adapter shell summaries">
+        {previews.map((preview) => (
+          <article className="card provider-card profile-card" key={preview.provider.id}>
+            <span className={`dot ${preview.status}`} />
+            <div className="card-body">
+              <div className="card-title">
+                <strong>{preview.provider.name}</strong>
+                <small>{preview.status} · {preview.modelCount} {preview.modelCount === 1 ? 'model' : 'models'}</small>
+              </div>
+              {preview.issues.length > 0 ? (
+                <ul className="issue-list">
+                  {preview.issues.map((issue) => (
+                    <li key={`${preview.provider.id}-${issue.code}`}>
+                      {issue.message}
+                      <small>{issue.nextAction}</small>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+              <div className="tag-row">
+                {preview.capabilities.tags.length > 0
+                  ? preview.capabilities.tags.map((tag) => <span className="tag" key={tag}>{tag} {preview.capabilities.counts[tag]}</span>)
+                  : <span className="tag muted">no model capabilities</span>}
+              </div>
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function formatDiscoverySummary(summary: ReturnType<typeof summarizeDiscoveryDryRun>): string {
   const readyCount = summary.countsByStatus.ready ?? 0;
   const warningCount = severityCount(summary.countsBySeverity, 'warning');
   const errorCount = severityCount(summary.countsBySeverity, 'error');
   return `${readyCount} ready · ${warningCount} warning · ${errorCount} error`;
+}
+
+function formatAdapterShellSummary(previews: ProviderDiscoveryAdapterShellResult[]): string {
+  const readyCount = previews.filter((preview) => preview.status === 'ready').length;
+  const blockedCount = previews.filter((preview) => preview.status === 'blocked').length;
+  const issueCount = previews.reduce((total, preview) => total + preview.issueCount, 0);
+  return `${readyCount} ready · ${blockedCount} blocked · ${issueCount} ${issueCount === 1 ? 'issue' : 'issues'}`;
 }
 
 function severityCount(counts: Partial<Record<ProviderDiscoveryDryRunSeverity, number>>, severity: ProviderDiscoveryDryRunSeverity): number {
