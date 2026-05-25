@@ -5,7 +5,7 @@
 - **Maturity:** `growth`
 - **Planned cadence:** 1-2 focused sessions per week while the source-checkout operator workflow is hardened into a coherent, demonstrable desktop flow.
 - **Current phase:** Growth hardening after the foundation completion review: keep the guided source-checkout workflow coherent, accessible, and evidence-backed before adding live provider execution.
-- **Latest review:** The 2026-05-25 completion review found that Agent Hangar has a coherent source-checkout foundation for secret-safe provider profiles, prompt/template governance, deterministic execution previews, collaboration/audit evidence, scenario bundles, workspace portability previews, dry-run import/export, fixture review, provider/agent shell states, and a disabled fixture-backed provider discovery adapter. The current source-checkout review path now includes schema-versioned onboarding/accessibility guidance that makes the guided walkthrough primary while keeping underlying evidence visible. Cadence remains `growth`; the next phase should emphasize review gates before any live discovery or packaging work.
+- **Latest review:** The 2026-05-25 completion review found that Agent Hangar has a coherent source-checkout foundation for secret-safe provider profiles, prompt/template governance, deterministic execution previews, collaboration/audit evidence, scenario bundles, workspace portability previews, dry-run import/export, fixture review, provider/agent shell states, and a disabled fixture-backed provider discovery adapter. The current source-checkout review path now includes schema-versioned onboarding/accessibility guidance, a guided walkthrough, and evidence quality gates that check copied Markdown consistency before live discovery or packaging work. Cadence remains `growth`; the next phase should emphasize live discovery readiness review while provider calls stay disabled.
 - **Category:** Local-first desktop productivity / multi-agent operations UI.
 
 Agent Hangar is a young project. It should receive active investment only while each session advances a product-shaped workflow: reproducible setup, safe provider management, prompt/template governance, task execution, observability, or usable demo evidence. Avoid adding decorative UI or narrow options before the core operator workflow is dependable.
@@ -68,13 +68,15 @@ Agent Hangar is a young project. It should receive active investment only while 
    - A deterministic pure TypeScript source-checkout onboarding helper now returns schema-versioned keyboard order, named-region expectations, status-region expectations, setup notes, primary walkthrough guidance, blocker and next-action summaries, and secret-safe Markdown.
    - The helper warns when required operator regions or status text are absent or unnamed, keeps setup notes truthful for local source checkout usage, and redacts API-key-looking, bearer, encrypted-key, and customer-like text from data and Markdown.
    - The execution graph panel now places a named source-checkout onboarding region near the top of the workflow, presents the guided walkthrough as the primary review path, and keeps provider, template, execution, collaboration, and portability evidence links visible.
+8. **Source-checkout evidence quality gates**
+   - A deterministic pure TypeScript evidence quality-gate helper now reviews copied/preview evidence consistency across the walkthrough, scenario bundle, workspace portability manifest, import/export dry run, collaboration triage/audit previews, run evidence, onboarding guidance, and related Markdown outputs.
+   - The helper is schema-versioned, clone-safe, source-checkout-only, local-only, provider-free, network-free, shell-free, package-registry-free, and Tauri-free.
+   - It returns compact checked-surface counts, status/severity counts, issue lists, next actions, and Markdown summary data while flagging missing Markdown, missing or unsupported schema versions, non-source-checkout modes, package-registry or shell install command text, secret-like content, and structured-vs-Markdown count mismatches.
+   - The execution graph panel now exposes an accessible source-checkout evidence quality gate preview/copy region using the existing injected copy adapter pattern.
 
 ## Next
 
-1. **Source-checkout evidence quality gates**
-   - Add focused review checks for copied Markdown/evidence consistency across walkthrough, scenario bundle, portability manifest, import/export dry run, collaboration, and audit previews.
-   - Keep the checks deterministic and local-only so operators can compare source-checkout evidence without live provider calls.
-2. **Live discovery readiness review**
+1. **Live discovery readiness review**
    - Keep live discovery disabled until secure storage, cancellation, cache replacement, retry policy, and live-adapter tests satisfy the reviewed contract.
 
 ## Later

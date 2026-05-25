@@ -43,6 +43,7 @@ import { buildWorkspaceImportExportDryRun } from './harness/workspaceImportExpor
 import { type EscalationPolicyRecord, type PromptTemplateRecord, type WorkspaceToolRecord } from './harness/promptTemplates';
 import { buildSourceCheckoutOnboarding } from './harness/sourceCheckoutOnboarding';
 import { buildSourceCheckoutOperatorWalkthrough } from './harness/sourceCheckoutOperatorWalkthrough';
+import { buildSourceCheckoutEvidenceQualityGate } from './harness/sourceCheckoutEvidenceQualityGates';
 
 export interface ExecutionGraphPanelProps {
   graph?: ExecutionGraph;
@@ -68,6 +69,7 @@ export interface ExecutionGraphPanelProps {
   copyWorkspaceManifest?: (markdown: string) => void | Promise<void>;
   copyWorkspaceDryRun?: (markdown: string) => void | Promise<void>;
   copySourceCheckoutWalkthrough?: (markdown: string) => void | Promise<void>;
+  copySourceCheckoutQualityGate?: (markdown: string) => void | Promise<void>;
 }
 
 interface CollaborationStorage {
@@ -119,6 +121,7 @@ export function ExecutionGraphPanel({
   copyWorkspaceManifest,
   copyWorkspaceDryRun,
   copySourceCheckoutWalkthrough,
+  copySourceCheckoutQualityGate,
 }: ExecutionGraphPanelProps) {
   const [selectedScenarioId, setSelectedScenarioId] = useState(
     initialDemoScenarioId ?? demoScenarios?.[0]?.id ?? '',
@@ -129,6 +132,7 @@ export function ExecutionGraphPanel({
   const [workspaceManifestCopyState, setWorkspaceManifestCopyState] = useState<'idle' | 'copied'>('idle');
   const [workspaceDryRunCopyState, setWorkspaceDryRunCopyState] = useState<'idle' | 'copied'>('idle');
   const [walkthroughCopyState, setWalkthroughCopyState] = useState<'idle' | 'copied'>('idle');
+  const [qualityGateCopyState, setQualityGateCopyState] = useState<'idle' | 'copied'>('idle');
   const selectedScenario = useMemo(
     () => demoScenarios?.find((scenario) => scenario.id === selectedScenarioId) ?? demoScenarios?.[0],
     [demoScenarios, selectedScenarioId],
@@ -234,6 +238,90 @@ export function ExecutionGraphPanel({
     workspaceManifestProviders?.length,
   ]);
   const sourceCheckoutOnboarding = useMemo(() => buildSourceCheckoutOnboarding(), []);
+  const sourceCheckoutQualityGate = useMemo(() => buildSourceCheckoutEvidenceQualityGate({
+    surfaces: [
+      {
+        id: 'walkthrough',
+        label: 'Source-checkout operator walkthrough',
+        expectedSchemaVersion: 'agent-hangar.source-checkout-operator-walkthrough.v1',
+        evidence: sourceCheckoutWalkthrough,
+        countChecks: [
+          { label: 'Steps', structuredCount: sourceCheckoutWalkthrough.summary.stepCount, markdownPattern: /-\s*Steps:\s*(\d+)/i },
+          { label: 'Blockers', structuredCount: sourceCheckoutWalkthrough.summary.blockerCount, markdownPattern: /-\s*Blockers:\s*(\d+)/i },
+        ],
+      },
+      ...(scenarioEvidenceBundle ? [{
+        id: 'scenario-bundle',
+        label: 'Scenario evidence bundle',
+        expectedSchemaVersion: 'agent-hangar.scenario-evidence-bundle.v1',
+        evidence: scenarioEvidenceBundle,
+        countChecks: [
+          { label: 'Unresolved escalations', structuredCount: scenarioEvidenceBundle.collaboration.unresolvedEscalationCount, markdownPattern: /-\s*Unresolved escalations:\s*(\d+)/i },
+        ],
+      }] : []),
+      {
+        id: 'workspace-manifest',
+        label: 'Workspace portability manifest',
+        expectedSchemaVersion: 'agent-hangar.workspace-manifest-preview.v1',
+        evidence: workspaceManifestPreview,
+        countChecks: [
+          { label: 'Blockers', structuredCount: workspaceManifestPreview.summary.blockerCount, markdownPattern: /-\s*Blockers:\s*(\d+)/i },
+          { label: 'Provider inventories', structuredCount: workspaceManifestPreview.providers.total, markdownPattern: /-\s*Provider inventories:\s*(\d+)/i },
+        ],
+      },
+      {
+        id: 'workspace-dry-run',
+        label: 'Workspace import/export dry run',
+        expectedSchemaVersion: 'agent-hangar.workspace-import-export-dry-run.v1',
+        evidence: workspaceDryRun,
+        countChecks: [
+          { label: 'Accepted files', structuredCount: workspaceDryRun.summary.acceptedFileCount, markdownPattern: /-\s*Accepted files:\s*(\d+)/i },
+          { label: 'Blockers', structuredCount: workspaceDryRun.summary.blockerCount, markdownPattern: /-\s*Blockers:\s*(\d+)/i },
+        ],
+      },
+      {
+        id: 'collaboration-triage',
+        label: 'Collaboration triage preview',
+        expectedSchemaVersion: 'agent-hangar.collaboration-triage-view.v1',
+        evidence: { ...collaborationTriage, markdown: auditHistoryPreview.markdown },
+      },
+      {
+        id: 'audit-history',
+        label: 'Audit history preview',
+        expectedSchemaVersion: 'agent-hangar.audit-history-preview.v1',
+        evidence: auditHistoryPreview,
+        countChecks: [
+          { label: 'Audit entries', structuredCount: auditHistoryPreview.counts.auditEntries, markdownPattern: /-\s*Audit entries:\s*(\d+)/i },
+          { label: 'Unresolved escalations', structuredCount: auditHistoryPreview.counts.unresolvedEscalations, markdownPattern: /-\s*Unresolved escalations:\s*(\d+)/i },
+        ],
+      },
+      ...(runEvidenceExport ? [{
+        id: 'run-evidence',
+        label: 'Run evidence export',
+        expectedSchemaVersion: 'agent-hangar.run-evidence-export.v1',
+        evidence: runEvidenceExport,
+        countChecks: [
+          { label: 'Events', structuredCount: runEvidenceExport.counts.events, markdownPattern: /-\s*Events:\s*(\d+)/i },
+          { label: 'Graph issues', structuredCount: runEvidenceExport.counts.graphIssues, markdownPattern: /-\s*Graph issues:\s*(\d+)/i },
+        ],
+      }] : []),
+      {
+        id: 'onboarding',
+        label: 'Source-checkout onboarding',
+        expectedSchemaVersion: 'agent-hangar.source-checkout-onboarding.v1',
+        evidence: sourceCheckoutOnboarding,
+      },
+    ],
+  }), [
+    auditHistoryPreview,
+    collaborationTriage,
+    runEvidenceExport,
+    scenarioEvidenceBundle,
+    sourceCheckoutOnboarding,
+    sourceCheckoutWalkthrough,
+    workspaceDryRun,
+    workspaceManifestPreview,
+  ]);
   const allowedControlActions = useMemo(
     () => (controlState ? deriveAllowedExecutionControlActions(controlState) : []),
     [controlState],
@@ -292,6 +380,10 @@ export function ExecutionGraphPanel({
   const handleCopySourceCheckoutWalkthrough = () => {
     const copy = copySourceCheckoutWalkthrough ?? ((markdown: string) => navigator.clipboard?.writeText(markdown));
     void Promise.resolve(copy(sourceCheckoutWalkthrough.markdown)).then(() => setWalkthroughCopyState('copied'));
+  };
+  const handleCopySourceCheckoutQualityGate = () => {
+    const copy = copySourceCheckoutQualityGate ?? ((markdown: string) => navigator.clipboard?.writeText(markdown));
+    void Promise.resolve(copy(sourceCheckoutQualityGate.markdown)).then(() => setQualityGateCopyState('copied'));
   };
   const handleControlAction = (action: ExecutionControlAction) => {
     if (!controlState) {
@@ -742,6 +834,39 @@ export function ExecutionGraphPanel({
           ))}
         </pre>
         {walkthroughCopyState === 'copied' ? <p className="copy-status" role="status">Copied source-checkout operator walkthrough.</p> : null}
+      </section>
+
+      <section className="source-checkout-quality-gate-preview" aria-labelledby="source-checkout-quality-gate-heading">
+        <div className="trail-heading">
+          <div>
+            <h3 id="source-checkout-quality-gate-heading">Source-checkout evidence quality gate</h3>
+            <div className="summary-grid trail-summary" aria-label="Source-checkout evidence quality gate metadata">
+              <span>{sourceCheckoutQualityGate.schemaVersion}</span>
+              <span>{sourceCheckoutQualityGate.source.mode}</span>
+              <span>{sourceCheckoutQualityGate.summary.status}</span>
+              <span>{sourceCheckoutQualityGate.summary.checkedSurfaceCount} surfaces</span>
+              <span>{sourceCheckoutQualityGate.summary.issueCount} issues</span>
+            </div>
+          </div>
+          <button className="icon-button" type="button" onClick={handleCopySourceCheckoutQualityGate} aria-label="Copy source-checkout evidence quality gate" title="Copy source-checkout evidence quality gate">
+            <Clipboard size={18} aria-hidden="true" />
+          </button>
+        </div>
+        {sourceCheckoutQualityGate.issues.length > 0 ? (
+          <ul className="issue-list" aria-label="Source-checkout evidence quality gate issues">
+            {sourceCheckoutQualityGate.issues.slice(0, 5).map((qualityIssue) => (
+              <li key={`${qualityIssue.surfaceId}-${qualityIssue.code}-${qualityIssue.message}`}>{qualityIssue.message}</li>
+            ))}
+          </ul>
+        ) : (
+          <p className="copy-status">Source-checkout evidence quality gate ready.</p>
+        )}
+        <pre className="run-evidence-markdown" aria-label="Source-checkout evidence quality gate Markdown preview">
+          {sourceCheckoutQualityGate.markdown.split('\n').map((line, index) => (
+            <code key={`${index}-${line}`}>{line || ' '}</code>
+          ))}
+        </pre>
+        {qualityGateCopyState === 'copied' ? <p className="copy-status" role="status">Copied source-checkout evidence quality gate.</p> : null}
       </section>
 
       <section className="workspace-manifest-preview" aria-labelledby="workspace-manifest-heading">

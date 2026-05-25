@@ -324,6 +324,46 @@ describe('ExecutionGraphPanel', () => {
     expect(copySourceCheckoutWalkthrough.mock.calls[0]![0]).not.toMatch(/apiKey|encryptedApiKey|sk-ui-secret|encryptedKeyMaterial|Bearer/i);
   });
 
+  it('renders source-checkout evidence quality gate preview and copies Markdown through an injected side effect', async () => {
+    const scenarios = listDemoWorkspaceScenarios();
+    const copySourceCheckoutQualityGate = vi.fn();
+
+    render(
+      <ExecutionGraphPanel
+        demoScenarios={scenarios}
+        initialDemoScenarioId="coordination-happy-path"
+        workspaceManifestProviders={[
+          {
+            id: 'local-provider-demo',
+            kind: 'openai-compatible',
+            displayName: 'Local Demo Provider',
+            baseUrl: 'http://localhost:11434/v1',
+            createdAt: '2026-05-23T10:00:00.000Z',
+            updatedAt: '2026-05-23T10:00:00.000Z',
+            encryptedApiKey: 'local-demo:v1:sk-ui-secret',
+          },
+        ]}
+        copySourceCheckoutQualityGate={copySourceCheckoutQualityGate}
+      />,
+    );
+
+    const qualityGate = screen.getByRole('region', { name: 'Source-checkout evidence quality gate' });
+    expect(within(qualityGate).getByRole('heading', { name: 'Source-checkout evidence quality gate' })).toBeInTheDocument();
+    expect(within(qualityGate).getByText('agent-hangar.source-checkout-evidence-quality-gate.v1')).toBeInTheDocument();
+    expect(within(qualityGate).getByText('source-checkout-only')).toBeInTheDocument();
+    expect(within(qualityGate).getByText('8 surfaces')).toBeInTheDocument();
+    expect(within(qualityGate).getByText('- Checked surfaces: 8')).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/apiKey|encryptedApiKey|sk-ui-secret|encryptedKeyMaterial|Bearer|\bnpm\s+(?:install|ci|run|exec)\b/i);
+
+    fireEvent.click(within(qualityGate).getByRole('button', { name: 'Copy source-checkout evidence quality gate' }));
+
+    expect(copySourceCheckoutQualityGate).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(within(qualityGate).getByRole('status')).toHaveTextContent('Copied source-checkout evidence quality gate.'));
+    expect(copySourceCheckoutQualityGate.mock.calls[0]![0]).toContain('schemaVersion: agent-hangar.source-checkout-evidence-quality-gate.v1');
+    expect(copySourceCheckoutQualityGate.mock.calls[0]![0]).toContain('## Surfaces');
+    expect(copySourceCheckoutQualityGate.mock.calls[0]![0]).not.toMatch(/apiKey|encryptedApiKey|sk-ui-secret|encryptedKeyMaterial|Bearer/i);
+  });
+
   it('renders source-checkout onboarding as the primary accessible review path without leaking secrets', () => {
     const scenarios = listDemoWorkspaceScenarios();
 
